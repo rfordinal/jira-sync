@@ -1,0 +1,29 @@
+{
+	"database": {
+		"dsn": "DBI:mysql:database=jira_sync;host=localhost;port=3306",
+		"user": "jira",
+		"password": "mypassword"
+	},
+	"customer": {
+		"name": "mycustomer",
+		"url": "http://jira.mycustomer.com",
+		"user": "info@mycompany.com", "password": "mypassword",
+		"project": "WEB",
+		"key": "WEB",
+		"account": 1,
+		"self": "mycustomer.com",
+		"email_match": "mycustomer.com"
+	},
+	"vendor": {
+		"name": "mycompany",
+		"url": "http://jira.mycompany.com",
+		"user": "servicedeskuser", "password": "servicedeskuserpassword",
+		"project": "SLA",
+		"key": "SLA",
+		"sub_issue_type": 10301,
+		"sub_project": "CUSTOMER",
+		"sub_key": "CUSTOMER",
+		"self": "mycompany.com",
+		"email_match": "mycompany.com"
+	}
+}
