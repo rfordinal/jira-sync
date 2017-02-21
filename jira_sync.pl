@@ -695,11 +695,14 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					my $body=$comment->{'body'};
 						$body='*'. $comment->{'author'}->{'name'} .'*: '.$body
 							if ($issue->{'source'} eq "C" && $comment->{'source'} eq "C");
+							
+					$body=comment_text_replace($body,$issue->{'source'});
+					
 					my $body_=$body;
 						$body_=~s|\n|\\n|gms;
 						$body_=~s|\t|\\t|gms;
 						$body_=~s|\r|\\r|gms;
-						$body_=substr($body_,0,100);
+						$body_=substr($body_,0,500);
 					
 					print '   + comment @'.$comment->{'author'}->{'name'}.' '.$issue->{'source'}.'/'.$comment->{'source'}.' "'.$body_."\"\n";
 					
@@ -730,28 +733,27 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	
 	# description
-#	if ($source->{'fields'}->{'description'} ne $issue->{'fields'}->{'description'})
-#	{
-		if ($issue->{'source'} eq "V")
+	$issue->{'fields'}->{'description'}=comment_text_replace($issue->{'fields'}->{'description'},$issue->{'source'});
+	
+	if ($issue->{'source'} eq "V")
+	{
+		$issue->{'fields'}->{'description'}=~s|^\*.*?\*: ||;
+	}
+	elsif ($issue->{'source'} eq "C")
+	{
+		$issue->{'fields'}->{'description'}=~s|^[\n\r]?---[\n\r]+.*$||ms;
+		if ($issue->{'reporter'} ne $vendor_user)
 		{
-			$issue->{'fields'}->{'description'}=~s|^\*.*?\*: ||;
+			$issue->{'fields'}->{'description'}=
+				'*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'};
 		}
-		elsif ($issue->{'source'} eq "C")
-		{
-			$issue->{'fields'}->{'description'}=~s|^[\n\r]?---[\n\r]+.*$||ms;
-			if ($issue->{'reporter'} ne $vendor_user)
-			{
-				$issue->{'fields'}->{'description'}=
-					'*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'};
-			}
-		}
-		
-		if ($issue->{'fields'}->{'description'} ne $issue_dst->{'fields'}->{'description'})
-		{
-			$fields{'description'} = $issue->{'fields'}->{'description'};
-			print "   'description' to '".$fields{'description'}."'\n";
-		}
-#	}
+	}
+	
+	if ($issue->{'fields'}->{'description'} ne $issue_dst->{'fields'}->{'description'})
+	{
+		$fields{'description'} = $issue->{'fields'}->{'description'};
+		print "   'description' to '".$fields{'description'}."'\n";
+	}
 	
 	# priority
 	if ($source->{'fields'}->{'priority'}->{'name'} ne $issue->{'fields'}->{'priority'}->{'name'}
@@ -923,6 +925,44 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #	print "a\n";
 #	$issue=$jira_customer->GET('/issue/'.$issue->{'key'}, undef);
 }
+
+
+sub replace_issue
+{
+	my $issue=shift;
+	my $source=shift;
+	my $name='customer';
+		$name='vendor' if $source eq "V";
+	my $name_opposite='vendor';
+		$name_opposite='customer' if $source eq "V";
+	my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_$name=? LIMIT 1");
+		$sth->execute($issue);
+	my $db0_line = $sth->fetchrow_hashref();
+	return $db0_line->{'id_'.$name_opposite} || $issue;
+}
+
+
+sub comment_text_replace
+{
+	my $text=shift;
+	my $source=shift;
+	
+	# mentioned issues
+	$text=" ".$text." ";
+	if ($source eq "V")
+	{
+		$text=~s/((?!browse\/).)($vendor_key\-\d+)/$1.replace_issue($2,$source)/ge;
+		$text=~s/((?!browse\/).)($vendor_sub_key\-\d+)/$1.replace_issue($2,$source)/ge;
+	}
+	else
+	{
+		$text=~s/((?!browse\/).)($customer_key\-\d+)/$1.replace_issue($2,$source)/ge;
+	}
+	
+	$text=~s|^ ||;$text=~s| $||;
+	return $text;
+}
+
 
 print "\n";
 if (!$synced)
