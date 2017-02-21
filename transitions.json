@@ -569,18 +569,12 @@
             }
          },
          "Waiting for support->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Open" : {
-               "status" : "In Progress"
-            },
-            "Rejected" : {
-               "status" : "In Progress"
-            },
-            "Waiting for reporter" : {
-               "status" : "In Progress"
-            }
+            "In Progress" : {"ok" : 1},
+            "Open" : {"status" : "In Progress"},
+            "Rejected" : {"status" : "In Progress"},
+            "Waiting for reporter" : {"status" : "In Progress"},
+            
+            "Done" : {"ok" : 1}
          },
          "Waiting for support->Resolved" : {
             "Closed" : {
@@ -606,21 +600,12 @@
             }
          },
          "Waiting for support->Waiting for customer" : {
-            "In Progress" : {
-               "status" : "Waiting for reporter"
-            },
-            "Open" : {
-               "status" : "In Progress"
-            },
-            "Rejected" : {
-               "path" : [
-                  "In Progress",
-                  "Waiting for reporter"
-               ]
-            },
-            "Under Review" : {
-               "ok" : 1
-            }
+            "In Progress" : {"status" : "Waiting for reporter"},
+            "Open" : {"status" : "In Progress"},
+            "Rejected" : {"path" : ["In Progress","Waiting for reporter"]},
+            "Under Review" : {"ok" : 1},
+            
+            "Done" : {"ok" : 1}
          }
       },
       "sub-statuspath" : {
