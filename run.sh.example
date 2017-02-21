@@ -1,0 +1,13 @@
+#!/bin/bash
+
+function error
+{
+	mail -s "JIRA sync stopped working!" myemail@mycompany.com < /dev/null;
+	sleep 600;
+}
+
+number=1;
+while [ $number -eq 1 ];do
+	./jira_sync.pl || error;
+	sleep 5;
+done;
