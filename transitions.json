@@ -545,28 +545,11 @@
             }
          },
          "Waiting for support->Closed" : {
-            "Cancelled" : {
-               "ok" : 1
-            },
-            "Closed" : {
-               "ok" : 1
-            },
-            "Open" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Rejected" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            }
+            "Cancelled" : {"ok" : 1},
+            "Closed" : {"ok" : 1},
+            "Open" : {"path" : ["In Progress","Under Review","Done","Closed"]},
+            "Done" : {"path" : ["Closed"]},
+            "Rejected" : {"path" : ["In Progress","Under Review","Done","Closed"]}
          },
          "Waiting for support->In Progress" : {
             "In Progress" : {"ok" : 1},
@@ -743,6 +726,10 @@
             "To Do" : {
                "status" : "In Progress"
             }
+         },
+         "Resolved->In Progress" : {
+            "In Progress" : {"ok" : 1},
+            "Done" : {"path" : ["In Progress"]}
          },
          "Waiting for customer->Closed" : {
             "In Progress" : {
