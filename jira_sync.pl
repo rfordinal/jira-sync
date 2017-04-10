@@ -40,6 +40,9 @@ my $vendor=$config->{'vendor'}->{'name'};
 
 my $jira_customer = JIRA::REST->new($customer_url, $vendor_user, $config->{'vendor'}->{'password'});
 my $jira_vendor = JIRA::REST->new($vendor_url, $customer_user, $config->{'customer'}->{'password'});
+my $jira_vendor_servicedesk = JIRA::REST->new($vendor_url, $customer_user, $config->{'customer'}->{'password'},{
+	'host' => $vendor_url.'/rest/servicedeskapi'
+});
 
 my $dsn = $config->{'database'}->{'dsn'};
 my $dbh = DBI->connect($dsn, $config->{'database'}->{'user'}, $config->{'database'}->{'password'});
@@ -107,6 +110,24 @@ elsif ($arg{'key'})
 
 # vendor -> customer
 #
+
+=head1
+my $out=$jira_vendor->GET('/issue/SLA-8677/properties/feedback.token.key');
+#my $out=$jira_vendor->GET('/issue/SLA-8677/properties/request.channel.type');
+my $out=$jira_vendor->PUT('/issue/SLA-8677/properties/feedback.token.key', undef, '9e253c1dabaf291c0f77a8c6f66475462391b52e');	
+
+#my $out=$jira_vendor->PUT('/issue/SLA-8677/properties/request.channel.type', undef, 'jira');	
+
+#my $out=$jira_vendor->PUT('/issue/SLA-8677/properties/feedback', undef,{
+#	'token' => {
+#		'key' => '9e253c1dabaf291c0f77a8c6f66475462391b52e'
+#	}
+#});
+
+# http://jira.comsultia.com/servicedesk/customer/portal/3/SLA-8689/feedback?token=9e253c1dabaf291c0f77a8c6f66475462391b52e&rating=5
+print Dumper($out);
+exit;
+=cut
 
 my @issues;
 if ($search_customer_do)
@@ -274,7 +295,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my $issue_dst;
 		my %fields;
 #		print Dumper($issue);exit;
-		print Dumper($issue);
+#		print Dumper($issue);
 		if ($issue->{'source'} eq "C")
 		{
 			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
@@ -284,7 +305,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				if $issue->{'fields'}->{'duedate'};
 			
 			# creating to vendor
-#			print "priority name=".$issue->{'fields'}->{'priority'}->{'name'}."\n";
+=head1
 			$issue_dst=$jira_dst->POST('/issue', undef, {
 				'fields' => {
 					'project'   => { 'key' => $vendor_project },
@@ -301,6 +322,28 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					%fields
 				},
 			});
+=cut
+			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, {
+				'serviceDeskId' => 3,
+				'requestTypeId' => 6,
+				'requestFieldValues' => {
+					'summary' => $issue->{'fields'}->{'summary'},
+					'description' => '*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'},
+				}
+			});
+			$jira_dst->PUT('/issue/'.$issue_dst->{'issueKey'}, undef, {
+				"fields" => {
+					'customfield_10002' => ($customer_account+0),
+					'issuetype' => { 'name' =>
+						($conversion{'customer2vendor'}{'issuetype'}{
+								$issue->{'fields'}->{'issuetype'}->{'name'}
+							} || 'Task')
+					},
+					'priority' => {'name'=>$issue->{'fields'}->{'priority'}->{'name'}},
+					%fields
+				}
+			});
+			$issue_dst=$jira_dst->GET('/issue/'.$issue_dst->{'issueKey'}, undef);
 		}
 		else
 		{
@@ -413,7 +456,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my $est=$issue->{'fields'}->{'timetracking'}->{'originalEstimate'};
 		my $est_dst=$issue_dst->{'fields'}->{'timetracking'}->{'originalEstimate'};
 		print "   ? original-estimated=". $est ." $name_opposite=".$est_dst."\n";
-		if ($est ne $est_dst)
+		if ($est ne $est_dst && $issue_dst->{'fields'}->{'status'}->{'name'} ne "Closed")
 		{
 #			$fields{'timetracking'}{'originalEstimate'} = $est;
 			$jira_dst->PUT('/issue/'.$issue->{'key_sync'}, undef, {
@@ -533,6 +576,102 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		}
 		
 	}
+	# Customer -> Vendor
+	elsif (!$issue->{'sub'} && $issue->{'source'} eq "C")
+	{
+		print "   ? check sub-issues\n";
+		
+		foreach my $sub_issue(@{$issue->{'fields'}->{'subtasks'}})
+		{
+			$sub_issue=$jira_customer->GET('/issue/'.$sub_issue->{'key'}, undef);
+			
+			next if $sub_issue->{'fields'}->{'assignee'}->{'name'} ne $vendor_user;
+#			print $vendor_user;
+#			print Dumper($sub_issue);
+			
+			my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_customer=? LIMIT 1");
+				$sth->execute($sub_issue->{'key'});
+			my $db1_line = $sth->fetchrow_hashref();
+				$sub_issue->{'key_sync'} = $db1_line->{'id_vendor'};
+			
+			
+			if (!$sub_issue->{'key_sync'})
+			{
+				my $est=$sub_issue->{'fields'}->{'timetracking'}->{'originalEstimate'};
+				print "   + issue $sub_issue->{'key'} \"$sub_issue->{'fields'}->{'summary'}\" est=$est\n";
+				
+				$sub_issue->{'fields'}->{'updated'}=~s|T| |;
+				$sub_issue->{'fields'}->{'updated'}=~s|\..*$||;
+				
+				my %fields;
+				$fields{'duedate'}=$sub_issue->{'fields'}->{'duedate'}
+					if $sub_issue->{'fields'}->{'duedate'};				
+				
+				my $sub_issue_vendor=$jira_vendor->POST('/issue', undef, {
+					'fields' => {
+						'project'   => { 'key' => $vendor_sub_project },
+						'reporter'  => { 'name' => $customer_user},
+						'assignee'  => { 'name' => $customer_user},
+						'issuetype' => { 'name' =>
+							($conversion{'customer2vendor'}{'issuetype'}{
+								$issue->{'fields'}->{'issuetype'}->{'name'}
+							} || 'Task')
+						},
+						'summary' => $sub_issue->{'fields'}->{'summary'},
+						'priority' => {'name' => $sub_issue->{'fields'}->{'priority'}->{'name'}},
+						'description' => ($sub_issue->{'fields'}->{'description'} || ''),
+						'timetracking' => {
+							'originalEstimate' => $est || '1m'
+#							"remainingEstimate": "5"
+						},
+						%fields
+					},
+				});
+				
+				$sub_issue->{'key_sync'} = $sub_issue_vendor->{'key'};
+				$sub_issue_vendor=$jira_vendor->GET('/issue/'.$sub_issue->{'key_sync'}, undef);
+				$sub_issue_vendor->{'fields'}->{'updated'}=~s|T| |;
+				$sub_issue_vendor->{'fields'}->{'updated'}=~s|\..*$||;
+				
+				# update tasks
+				my $sth = $dbh->prepare("REPLACE INTO tasks (
+					id_customer, id_vendor,
+					updated_customer, updated_vendor,
+					data_customer, data_vendor
+				) VALUES (?,?,?,?,?,?)");
+				$sth->execute(
+					$sub_issue->{'key'},$sub_issue->{'key_sync'},
+					$sub_issue->{'fields'}{'updated'},
+					$sub_issue_vendor->{'fields'}{'updated'},
+					to_json($sub_issue,{ ascii => 1, pretty => 1 }),
+					to_json($sub_issue_vendor,{ ascii => 1, pretty => 1 })
+				);
+				
+				# add links
+				$jira_customer->POST('/issue/'.($sub_issue->{'key'}).'/remotelink', undef, {
+					'object' => {
+						'url' => $vendor_url.'/browse/'.$sub_issue_vendor->{'key'},
+						'title' => 'Remote issue '.$sub_issue_vendor->{'key'}
+					},
+				});
+				$jira_vendor->POST('/issue/'.($sub_issue_vendor->{'key'}).'/remotelink', undef, {
+					'object' => {
+						'url' => $customer_url.'/browse/'.$sub_issue->{'key'},
+						'title' => 'Remote issue '.$sub_issue->{'key'}
+					},
+				});
+				
+				$jira_vendor->POST('/issueLink', undef, {
+					"type" => {  "name" => "Including" },
+					"inwardIssue" => { "key" => $issue_dst->{'key'} },
+					"outwardIssue" => { "key" => $sub_issue_vendor->{'key'} },
+				});
+				
+			}
+			
+		}
+		
+	}
 	
 	if ($issue->{'sub'} && $issue->{'source'} eq "V")
 	{
@@ -645,7 +784,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			if (!$sth->rows)
 			{
 				print "   + file '".$attachment->{'filename'}."'\n";
-				next if $attachment->{'filename'}=~/[áéíóúčšžďťňľ]/;
+				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľ]/;
+				print "   = download and upload file\n";
 				my $response = $jira_src->{'rest'}->getUseragent()->get(
 					$attachment->{'content'},
 					%{$jira_src->{'rest'}->{'_headers'}},
@@ -674,9 +814,11 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		{
 #			print "check comments\n";
 			# comments
+			# TODO: check changes in comments
 			foreach my $comment (@{$jira_src->GET('/issue/'.$issue->{'key'}.'/comment', undef)->{'comments'}})
 			{
 #				print "check comment id_$name=".$comment->{'id'}."\n";
+				next if $comment->{'body'}=~/\/feedback\?token=/;
 				my $body=$comment->{'body'};
 					$body=~s|\n|\\n|gms;
 					$body=~s|\t|\\t|gms;
@@ -868,6 +1010,14 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					$fields{'fields'}{'resolution'}{'name'} = 
 						$conversion{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
 						|| $issue->{'fields'}->{'resolution'}->{'name'};
+						
+					# asking for feedback
+					
+					
+#					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
+#						'body' => $body
+#					});
+					
 				}
 				
 				$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
@@ -878,6 +1028,10 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				$issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
 			}
 			
+		}
+		elsif ($issue->{'source'} eq "C" && ($issue->{'fields'}->{'assignee'}->{'name'} ne $vendor))
+		{
+			print "    ! this is not assigned to mee, ignoring uknown path '$path'\n";
 		}
 		else
 		{
@@ -890,6 +1044,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #		$fields{'issuetype'}->{'name'} = $issue->{'fields'}->{'issuetype'}->{'name'};
 #		print "   'issuetype' to '".$fields{'issuetype'}->{'name'}."'\n";
 	}
+	
 	
 	# resolution
 #	if ($source->{'fields'}->{'resolution'}->{'name'} ne $issue->{'fields'}->{'resolution'}->{'name'}
@@ -968,12 +1123,12 @@ print "\n";
 if (!$synced)
 {
 	use DateTime;
-	my $dt = DateTime->now();
+	my $dt = DateTime->now('time_zone'=>'local');
 	if (
 		$dt->day_of_week() < 6
 		&& $dt->day_of_week() > 0
-		&& $dt->hour() >= 8
-		&& $dt->hour() <= 18
+		&& $dt->hour() >= 7
+		&& $dt->hour() < 19
 	)
 	{
 		print "sleep 30\n";
