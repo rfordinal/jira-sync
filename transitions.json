@@ -8,175 +8,86 @@
       },
       "statuspath" : {
          "Done->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "path" : [
-                  "Resolved",
-                  "Closed"
-               ]
-            },
-            "Resolved" : {
-               "status" : "Closed"
-            },
-            "Waiting for support" : { "path" : ["Resolved","Closed"] }
+            "Closed" : { "ok" : 1 },
+            "In Progress" : { "path" : [ "Resolved", "Closed" ]},
+            "Resolved" : { "path" : ["Closed"]},
+            "Waiting for support" : { "path" : ["Resolved","Closed"]}
          },
          "Draft->Closed" : {
-            "Resolved" : {
-               "status" : "Closed"
-            }
+				"Resolved" : { "path" : ["Closed"]}
          },
          "Draft->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Waiting for customer" : {
-               "status" : "In Progress"
-            }
+            "In Progress" : {"ok" : 1},
+            "Waiting for customer" : {"path" : ["In Progress"]}
          },
          "Draft->Open" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Waiting for customer" : {
-               "path" : ["In Progress"]
-            },
-            "Waiting for support" : {
-               "ok" : 1
-            }
+            "In Progress" : { "ok" : 1 },
+            "Waiting for customer" : { "path" : ["In Progress"] },
+            "Waiting for support" : { "ok" : 1 }
          },
          "Draft->Under Review" : {
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Resolved" : { "ok" : 1 }
          },
          "In Progress->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "status" : "Closed"
-            }
+            "Closed" : { "ok" : 1 },
+            "Resolved" : { "path" : ["Closed"]}
          },
          "In Progress->Done" : {
-            "In Progress" : {
-               "path" : [
-                  "Resolved"
-               ]
-            },
-            "Resolved" : {
-               "ok" : 1
-            },
-            "Waiting for support" : {
-               "path" : [
-                  "Resolved"
-               ]
-            }
+            "In Progress" : { "path" : ["Resolved"]},
+            "Resolved" : { "ok" : 1 },
+            "Waiting for support" : { "path" : ["Resolved"]}
          },
          "In Progress->Under Review" : {
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Resolved" : {"ok" : 1}
          },
          "In Progress->Waiting for reporter" : {
-            "In Progress" : {
-               "path" : [
-                  "Waiting for customer"
-               ]
-            },
-            "Resolved" : {
-               "ok" : 1
-            },
-            "Waiting for customer" : {
-               "ok" : 1
-            }
+				"Resolved" : { "ok" : 1},
+            "In Progress" : {"path" : [ "Waiting for customer"]},
+            "Waiting for customer" : { "ok" : 1 }
          },
          "Open->Cancelled" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Waiting for support" : {
-               "path" : [
-                  "In Progress",
-                  "Resolved",
-                  "Closed"
-               ]
-            }
+            "Closed" : { "ok" : 1 },
+            "Waiting for support" : { "path" : [ "In Progress", "Resolved", "Closed"]}
          },
          "Open->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Closed" : { "ok" : 1},
+            "Resolved" : { "ok" : 1 }
          },
          "Open->Done" : {
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Resolved" : { "ok" : 1}
          },
          "Open->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "ok" : 1
-            },
-            "Waiting for customer" : {
-               "status" : "In Progress"
-            },
-            "Waiting for support" : {
-               "status" : "In Progress"
-            }
+            "In Progress" : { "ok" : 1},
+            "Resolved" : { "ok" : 1},
+            "Waiting for customer" : { "path" : ["In Progress"]},
+            "Waiting for support" : { "path" : ["In Progress"]}
          },
          "Open->Under Review" : {
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Resolved" : {"ok" : 1}
          },
          "Open->Waiting for reporter" : {
-            "Waiting for customer" : {
-               "ok" : 1
-            }
+            "Waiting for customer" : {"ok" : 1}
          },
          "Rejected->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            }
+            "Closed" : {"ok" : 1}
          },
          "Rejected->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "status" : "Waiting for support"
-            },
-            "Waiting for support" : {
-               "ok" : 1
-            }
+            "In Progress" : {"ok" : 1},
+            "Resolved" : { "path" : ["Waiting for support"]},
+            "Waiting for support" : {"ok" : 1}
          },
          "Rejected->Under Review" : {
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Resolved" : {"ok" : 1}
          },
          "Rejected->Waiting for reporter" : {
-            "Waiting for customer" : {
-               "ok" : 1
-            }
+            "Waiting for customer" : {"ok" : 1}
          },
          "Rejected->Done" : {
             "Resolved" : { "ok" : 1}
          },
          "Under Review->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "status" : "Closed"
-            }
+            "Closed" : {"ok" : 1},
+            "Resolved" : {"path" : ["Closed"]}
          },
          "Under Review->Done" : {
             "Closed": {"ok" : 1},
@@ -184,89 +95,44 @@
             "Waiting for support": {"path": ["Resolved"]}
          },
          "Under Review->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "status" : "Waiting for support"
-            }
+            "In Progress" : {"ok" : 1},
+            "Resolved" : {"path" : ["Waiting for support"]}
          },
          "Under Review->Rejected" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "status" : "Waiting for support"
-            },
-            "Waiting for customer" : {
-               "status" : "Waiting for support"
-            },
-            "Waiting for support" : {
-               "ok" : 1
-            }
+            "In Progress" : {"ok" : 1},
+            "Resolved" : {"path" : ["Waiting for support"]},
+            "Waiting for customer" : {"path" : "Waiting for support"},
+            "Waiting for support" : {"ok" : 1}
          },
          "Under Review->Waiting for reporter" : {
-            "Waiting for customer" : {
-               "ok" : 1
-            }
+            "Waiting for customer" : {"ok" : 1}
          },
          "Waiting for reporter->Done" : {
             "Resolved" : { "ok" : 1}
          },
          "Waiting for reporter->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "status" : "Closed"
-            },
-            "Waiting for customer" : {
-               "path" : [
-                  "In Progress",
-                  "Resolved",
-                  "Closed"
-               ]
-            }
+            "Closed" : {"ok" : 1},
+            "Resolved" : {"path" : ["Closed"]},
+            "Waiting for customer" : { "path" : ["In Progress","Resolved","Closed"]}
          },
          "Waiting for reporter->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "path" : [
-                  "Waiting for support",
-                  "In Progress"
-               ]
-            },
-            "Waiting for customer" : {
-               "status" : "In Progress"
-            },
-            "Waiting for support" : {
-               "ok" : 1
-            }
+            "In Progress" : {"ok" : 1},
+            "Resolved" : {"path" : ["Waiting for support","In Progress"]},
+            "Waiting for customer" : {"path" : "In Progress"},
+            "Waiting for support" : {"ok" : 1}
          },
          "Waiting for reporter->Under Review" : {
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Resolved" : {"ok" : 1}
          }
       },
       "sub-statuspath" : {
          "Done->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Reopened" : {
-               "ok" : 1
-            }
+            "In Progress" : {"ok" : 1},
+            "Reopened" : {"ok" : 1}
          },
          "In Progress->Done" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Closed" : {"ok" : 1},
+            "Resolved" : {"ok" : 1}
          },
          "In Progress->To Do" : {
 				"In Progress" : {"path" : ["Open"]},
@@ -274,18 +140,9 @@
             "Open" : {"ok" : 1}
          },
          "To Do->Done" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Reopened" : {
-               "path" : [
-                  "In Progress",
-                  "Resolved"
-               ]
-            },
-            "Resolved" : {
-               "ok" : 1
-            }
+            "Closed" : {"ok" : 1},
+            "Reopened" : {"path" : ["In Progress","Resolved"]},
+            "Resolved" : {"ok" : 1}
          },
          "To Do->In Progress" : {
             "In Progress" : {"ok" : 1},
@@ -313,35 +170,15 @@
       },
       "statuspath" : {
          "In Progress->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "path" : [
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Open" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Under Review" : {
-               "path" : [
-                  "Done",
-                  "Closed"
-               ]
-            }
+            "Closed" : {"ok" : 1},
+            "In Progress" : {"path" : ["Under Review","Done","Closed"]},
+            "Open" : {"path" : ["In Progress","Under Review","Done","Closed"]},
+            "Under Review" : {"path" : ["Done","Closed"]}
          },
          "In Progress->Resolved" : {
             "Closed" : { "ok" : 1 },
             "Done" : { "ok" : 1 },
-            "In Progress" : { "resolution" : 1, "status" : "Under Review" },
+            "In Progress" : { "resolution" : 1, "path" : ["Under Review"]},
             "Draft" : { "path" : ["Open","In Progress","Under Review"]},
             "Open" : { "path" : ["In Progress","Under Review"]},
             "Under Review" : { "ok" : 1}
@@ -351,74 +188,23 @@
             "Done" : {"ok" : 1}
          },
          "In Progress->Waiting for customer" : {
-            "In Progress" : {
-               "status" : "Waiting for reporter"
-            },
-            "Open" : {
-               "path" : [
-                  "In Progress",
-                  "Waiting for reporter"
-               ]
-            },
-            "Waiting for reporter" : {
-               "ok" : 1
-            },
+            "In Progress" : {"path" : ["Waiting for reporter"]},
+            "Open" : {"path" : ["In Progress","Waiting for reporter"]},
+            "Waiting for reporter" : {"ok" : 1},
             "Done" : {"ok" : 1}
          },
          "In Progress->Waiting for support" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Open" : {
-               "status" : "In Progress"
-            }
+            "In Progress" : {"ok" : 1},
+            "Open" : {"path" : ["In Progress"]}
          },
          "Resolved->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Done" : {
-               "path" : [
-                  "Closed"
-               ]
-            },
-            "In Progress" : {
-               "path" : [
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Open" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Rejected" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Under Review" : {
-               "path" : [
-                  "Done",
-                  "Closed"
-               ]
-            },
-            "Waiting for reporter" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            }
+            "Closed" : {"ok" : 1},
+            "Done" : {"path" : ["Closed"]},
+            "In Progress" : {"path" : ["Under Review","Done","Closed"]},
+            "Open" : {"path" : ["In Progress","Under Review","Done","Closed"]},
+            "Rejected" : {"path" : ["In Progress","Under Review","Done","Closed"]},
+            "Under Review" : {"path" : ["Done","Closed"]},
+            "Waiting for reporter" : {"path" : ["In Progress","Under Review","Done","Closed"]}
          },
          "Resolved->In Progress" : {
             "Done" : {"ok" : 1},
@@ -427,89 +213,37 @@
             "Under Review" : {"path" : ["Rejected","In Progress"]}
          },
          "Resolved->Waiting for customer" : {
-            "Under Review" : {
-               "path" : [
-                  "Rejected",
-                  "In Progress",
-                  "Waiting for reporter"
-               ]
-            }
+            "Under Review" : {"path" : ["Rejected","In Progress","Waiting for reporter"]}
          },
          "Resolved->Waiting for support" : {
-            "Done" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "ok" : 1
-            },
-            "Rejected" : {
-               "ok" : 1
-            },
-            "Under Review" : {
-               "path" : [
-                  "Rejected"
-               ]
-            }
+            "Done" : {"ok" : 1},
+            "In Progress" : {"ok" : 1},
+            "Rejected" : {"ok" : 1},
+            "Under Review" : {"path" : ["Rejected"]}
          },
          "Waiting for customer->Closed" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Waiting for reporter" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review",
-                  "Done",
-                  "Closed"
-               ]
-            }
+            "Closed" : {"ok" : 1},
+            "Waiting for reporter" : {"path" : ["In Progress","Under Review","Done","Closed"]}
          },
          "Waiting for customer->In Progress" : {
             "In Progress" : { "ok" : 1},
             "Done" : { "ok" : 1},
-            "Open" : { "status" : "In Progress"},
-            "Waiting for reporter" : { "status" : "In Progress"}
+            "Open" : { "path" : ["In Progress"]},
+            "Waiting for reporter" : { "path" : ["In Progress"]}
          },
          "Waiting for customer->Resolved" : {
-            "Closed" : {
-               "ok" : 1
-            },
-            "Done" : {
-               "status" : "Closed"
-            },
-            "Draft" : {
-               "path" : [
-                  "Open",
-                  "In Progress",
-                  "Under Review"
-               ]
-            },
-            "In Progress" : {
-               "path" : [
-                  "Waiting for reporter",
-                  "In Progress"
-               ]
-            },
-            "Open" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review"
-               ]
-            },
-            "Under Review" : {
-               "ok" : 1
-            },
-            "Waiting for reporter" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review"
-               ]
-            }
+            "Closed" : {"ok" : 1},
+            "Done" : {"path" : ["Closed"]},
+            "Draft" : {"path" : ["Open","In Progress","Under Review"]},
+            "In Progress" : {"path" : ["Waiting for reporter","In Progress"]},
+            "Open" : {"path" : ["In Progress","Under Review"]},
+            "Under Review" : {"ok" : 1},
+            "Waiting for reporter" : {"path" : ["In Progress","Under Review"]}
          },
          "Waiting for customer->Waiting for support" : {
             "Open" : { "ok" : 1},
             "Done" : { "ok" : 1},
-            "Waiting for reporter" : { "status" : "In Progress"}
+            "Waiting for reporter" : { "path" : ["In Progress"]}
          },
          "Waiting for support->Closed" : {
             "Cancelled" : {"ok" : 1},
@@ -521,199 +255,112 @@
          "Waiting for support->In Progress" : {
             "In Progress" : {"ok" : 1},
             "Open" : {"path" : ["In Progress"]},
-            "Rejected" : {"status" : "In Progress"},
-            "Waiting for reporter" : {"status" : "In Progress"},
+            "Rejected" : {"path" : ["In Progress"]},
+            "Waiting for reporter" : {"path" : ["In Progress"]},
             "Done" : {"ok" : 1}
          },
          "Waiting for support->Resolved" : {
             "Closed" : {"ok" : 1},
             "Done" : {"ok" : 1},
             "Under Review" : {"ok" : 1},
-            "In Progress" : {"status" : "Under Review"},
-            "Open" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review"
-               ]
-            },
-            "Rejected" : {
-               "path" : [
-                  "In Progress",
-                  "Under Review"
-               ]
-            }
+            "In Progress" : {"path" : ["Under Review"]},
+            "Open" : {"path" : ["In Progress","Under Review"]},
+            "Rejected" : {"path" : ["In Progress","Under Review"]}
          },
          "Waiting for support->Waiting for customer" : {
-            "In Progress" : {"status" : "Waiting for reporter"},
-            "Open" : {"status" : "In Progress"},
+            "In Progress" : {"path" : ["Waiting for reporter"]},
+            "Open" : {"path" : ["In Progress"]},
             "Rejected" : {"path" : ["In Progress","Waiting for reporter"]},
             "Under Review" : {"ok" : 1},
-            
             "Done" : {"ok" : 1}
          }
       },
       "sub-statuspath" : {
          "Closed->Reopened" : {
-            "Done" : {
-               "status" : "In Progress"
-            }
-         },
+				"Done" : {"path" : ["In Progress"]}
+			},
          "Closed->Resolved" : {
             "Done" : {"ok" : 1},
-            "To Do" : {"status" : "Done"}
+            "To Do" : {"path" : ["Done"]}
          },
          "In Progress->Closed" : {
-            "Done" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "status" : "Done"
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "Done" : {"ok" : 1},
+            "In Progress" : {"path" : ["Done"]},
+            "To Do" : {"path" : ["Done"]}
          },
          "In Progress->Open" : {
-            "In Progress" : {
-               "status" : "To Do"
-            },
-            "To Do" : {
-               "ok" : 1
-            }
+            "In Progress" : {"path" : ["To Do"]},
+            "To Do" : {"ok" : 1}
          },
          "In Progress->Reopened" : {
-            "To Do" : {
-               "ok" : 1
-            }
+            "To Do" : {"ok" : 1}
          },
          "In Progress->Resolved" : {
-            "Done" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "status" : "Done"
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "Done" : {"ok" : 1},
+            "In Progress" : {"path" : ["Done"]},
+            "To Do" : {"path" : ["Done"]}
          },
          "In Progress->Waiting for customer" : {
-            "In Progress" : {
-               "ok" : 1
-            }
+            "In Progress" : {"ok" : 1}
          },
          "Open->Closed" : {
-            "Done" : {
-               "ok" : 1
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "Done" : {"ok" : 1},
+            "To Do" : {"path" : ["Done"]}
          },
          "Open->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "To Do" : {
-               "status" : "In Progress"
-            }
+            "In Progress" : {"ok" : 1},
+            "To Do" : {"path" : ["In Progress"]}
          },
          "Open->Reopened" : {
-            "To Do" : {
-               "status" : "In Progress"
-            }
+            "To Do" : {"path" : ["In Progress"]}
          },
          "Open->Resolved" : {
-            "To Do" : {
-               "status" : "Done"
-            }
+            "To Do" : {"path" : ["Done"]}
          },
          "Open->Waiting for customer" : {
-            "To Do" : {
-               "ok" : 1
-            }
+            "To Do" : {"ok" : 1}
          },
          "Reopened->Closed" : {
-            "In Progress" : {
-               "status" : "Done"
-            }
+            "In Progress" : {"path" : ["Done"]}
          },
          "Reopened->In Progress" : {
-            "Done" : {
-               "status" : "In Progress"
-            },
-            "In Progress" : {
-               "ok" : 1
-            },
-            "To Do" : {
-               "status" : "In Progress"
-            }
+            "Done" : {"path" : ["In Progress"]},
+            "In Progress" : {"ok" : 1},
+            "To Do" : {"path" : ["In Progress"]}
          },
          "Reopened->Resolved" : {
-            "Done" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "status" : "Done"
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "Done" : {"ok" : 1},
+            "In Progress" : {"path" : ["Done"]},
+            "To Do" : {"path" : ["Done"]}
          },
          "Reopened->Waiting for customer" : {
-            "In Progress" : {
-               "ok" : 1
-            }
+            "In Progress" : {"ok" : 1}
          },
          "Resolved->Closed" : {
-            "Done" : {
-               "ok" : 1
-            },
-            "In Progress" : {
-               "status" : "Done"
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "Done" : {"ok" : 1},
+            "In Progress" : {"path" : ["Done"]},
+            "To Do" : {"path" : ["Done"]}
          },
          "Resolved->Reopened" : {
-            "Done" : {
-               "status" : "In Progress"
-            },
-            "In Progress" : {
-               "ok" : 1
-            },
-            "To Do" : {
-               "status" : "In Progress"
-            }
+            "Done" : {"path" : ["In Progress"]},
+            "In Progress" : {"ok" : 1},
+            "To Do" : {"path" : ["In Progress"]}
          },
          "Resolved->In Progress" : {
             "In Progress" : {"ok" : 1},
             "Done" : {"path" : ["In Progress"]}
          },
          "Waiting for customer->Closed" : {
-            "In Progress" : {
-               "status" : "Done"
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "In Progress" : {"path" : ["Done"]},
+            "To Do" : {"path" : ["Done"]}
          },
          "Waiting for customer->In Progress" : {
-            "In Progress" : {
-               "ok" : 1
-            },
-            "To Do" : {
-               "status" : "In Progress"
-            }
+            "In Progress" : {"ok" : 1},
+            "To Do" : {"path" : ["In Progress"]}
          },
          "Waiting for customer->Resolved" : {
-            "In Progress" : {
-               "status" : "Done"
-            },
-            "To Do" : {
-               "status" : "Done"
-            }
+            "In Progress" : {"path" : ["Done"]},
+            "To Do" : {"path" : ["Done"]}
          }
       }
    }
