@@ -273,9 +273,16 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		print "   ! missing dst issue\n";
 		if ($issue->{'source'} eq "V" && $issue->{'key'}=~/^$vendor_sub_key/)
 		{
-			print "   . this is only sub-issue, possibly not linked to issue, skip sync\n";
-			$synced--;
-			next;
+			if ($issue->{'reporter'} eq $customer_user)
+			{
+				print "   . this is specific sub-issue, synchronized directly\n";
+			}
+			else
+			{
+				print "   . this is only sub-issue, possibly not linked to issue, skip sync\n";
+				$synced--;
+				next;
+			}
 		}
 		if ($issue->{'source'} eq "C" && $issue->{'sub'})
 		{
@@ -298,8 +305,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #		print Dumper($issue);
 		if ($issue->{'source'} eq "C")
 		{
-			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
-				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
+#			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
+#				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
 			
 			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
 				if $issue->{'fields'}->{'duedate'};
@@ -345,7 +352,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			});
 			$issue_dst=$jira_dst->GET('/issue/'.$issue_dst->{'issueKey'}, undef);
 		}
-		else
+		else # source is vendor
 		{
 			$fields{'customfield_10005'}=$issue->{'fields'}->{'customfield_10106'}
 				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
@@ -353,12 +360,15 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				if $issue->{'fields'}->{'duedate'};
 			
 			# creating to customer
-			$issue->{'reporter'}='comsultia' if $issue->{'reporter'} eq 'info@comsultia.com';
+#			$issue->{'reporter'}=$vendor_user if $issue->{'reporter'} eq $customer_user;
+			
+			# if assigned, use assignee as vendor
+			$issue->{'assignee'}=$vendor_user if $issue->{'assignee'};
 			
 			$issue_dst=$jira_dst->POST('/issue', undef, {
 				'fields' => {
 					'project'   => { 'key' => $customer_project },
-					'reporter'  => { 'name' => ($issue->{'reporter'} || 'comsultia')},
+					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
 					'issuetype' => { 'name' =>
 						($conversion{'vendor2customer'}{'issuetype'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
@@ -449,6 +459,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	die "can't find key" unless $issue_dst->{'key'};
 	
 	print "   . $name_opposite key $issue_dst->{'key'}\n";
+	
+	if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
+	{
+#		print "   . redefine sub=0\n";
+#		undef $issue->{'sub'};
+	}
 	
 	# check original-estimated in master issue (not sub-issue)
 	if (!$issue->{'sub'} && $issue->{'source'} eq "V")
@@ -562,13 +578,13 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				$jira_vendor->POST('/issue/'.($sub_issue->{'key'}).'/remotelink', undef, {
 					'object' => {
 						'url' => $customer_url.'/browse/'.$sub_issue_customer->{'key'},
-						'title' => 'Remote issue '.$sub_issue_customer->{'key'}
+						'title' => $customer.' issue '.$sub_issue_customer->{'key'}
 					},
 				});
 				$jira_customer->POST('/issue/'.($sub_issue_customer->{'key'}).'/remotelink', undef, {
 					'object' => {
 						'url' => $vendor_url.'/browse/'.$sub_issue->{'key'},
-						'title' => 'Remote issue '.$sub_issue->{'key'}
+						'title' => $vendor.' issue '.$sub_issue->{'key'}
 					},
 				});
 			}
@@ -651,13 +667,13 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				$jira_customer->POST('/issue/'.($sub_issue->{'key'}).'/remotelink', undef, {
 					'object' => {
 						'url' => $vendor_url.'/browse/'.$sub_issue_vendor->{'key'},
-						'title' => 'Remote issue '.$sub_issue_vendor->{'key'}
+						'title' => $vendor.' issue '.$sub_issue_vendor->{'key'}
 					},
 				});
 				$jira_vendor->POST('/issue/'.($sub_issue_vendor->{'key'}).'/remotelink', undef, {
 					'object' => {
 						'url' => $customer_url.'/browse/'.$sub_issue->{'key'},
-						'title' => 'Remote issue '.$sub_issue->{'key'}
+						'title' => $customer.' issue '.$sub_issue->{'key'}
 					},
 				});
 				
@@ -945,6 +961,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	{
 		my $prefix;
 			$prefix='sub-' if $issue->{'sub'};
+			if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
+			{
+				# this is not a real sub-task with sub-task workflow
+#				undef $prefix;
+			}
+			
 		my $fromto=$name.'2'.$name_opposite;
 		my $path=$source->{'fields'}->{'status'}->{'name'}.'->'.$issue->{'fields'}->{'status'}->{'name'};
 		print "   'status' changed '".$source->{'fields'}->{'status'}->{'name'}."'->'".$issue->{'fields'}->{'status'}->{'name'}."'\n";
