@@ -133,13 +133,14 @@ my @issues;
 if ($search_customer_do)
 {
 	print "search customer '$query_customer'\n";
+	my $jql = 'project in ('.$customer_project.') '
+		.'AND (assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
+#		.'AND issuetype in standardIssueTypes() '
+		.'AND status not in (Draft) ' # ignore drafts
+		.$query_customer;
+#	print $jql."\n";
 	my $search = eval {$jira_customer->POST('/search', undef, {
-		'jql'	=> 'project in ('.$customer_project.') '
-			.'AND (assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
-	#		.'AND issuetype in standardIssueTypes() '
-			.'AND status not in (Draft)' # ignore drafts
-			.$query_customer
-		,
+		'jql'	=> $jql,
 		'startAt'    => 0,
 		'maxResults' => 1000,
 		'fields' => ['summary','key','updated','issuetype','status']
@@ -151,19 +152,20 @@ if ($search_vendor_do)
 {
 	print "search vendor '$query_vendor'\n";
 #				issuetype in standardIssueTypes() AND 
-	my $search = eval {$jira_vendor->POST('/search', undef, {
-		'jql'	=> qq{
+	my $jql = qq{
+		(
 			(
-				(
-					Account = $customer_account AND
-					project in ($vendor_project)
-				)
-				OR
-				(
-					project in ($vendor_sub_project)
-				)
+				Account = $customer_account AND
+				project in ($vendor_project)
 			)
-		}.$query_vendor,
+			OR
+			(
+				project in ($vendor_sub_project)
+			)
+		)
+	}.$query_vendor;
+	my $search = eval {$jira_vendor->POST('/search', undef, {
+		'jql'	=> $jql,
 		'startAt'    => 0,
 		'maxResults' => 1000,
 		'fields' => ['summary','key','updated','issuetype','status']
@@ -301,28 +303,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
 				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
 			
+			$fields{'customfield_10002'} = $customer_account+0;
+			
 			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
 				if $issue->{'fields'}->{'duedate'};
 			
 			# creating to vendor
-=head1
-			$issue_dst=$jira_dst->POST('/issue', undef, {
-				'fields' => {
-					'project'   => { 'key' => $vendor_project },
-					'reporter'  => { 'name' => $customer_user },
-					'customfield_10002' => ($customer_account+0),
-					'issuetype' => { 'name' =>
-						($conversion{'customer2vendor'}{'issuetype'}{
-								$issue->{'fields'}->{'issuetype'}->{'name'}
-							} || 'Task')
-					},
-					'priority' => {'name'=>$issue->{'fields'}->{'priority'}->{'name'}},
-					'summary' => $issue->{'fields'}->{'summary'},
-					'description' => '*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'},
-					%fields
-				},
-			});
-=cut
 			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, {
 				'serviceDeskId' => 3,
 				'requestTypeId' => 6,
@@ -333,13 +319,17 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			});
 			$jira_dst->PUT('/issue/'.$issue_dst->{'issueKey'}, undef, {
 				"fields" => {
-					'customfield_10002' => ($customer_account+0),
+					'customfield_10002' => "" . $customer_account,
 					'issuetype' => { 'name' =>
 						($conversion{'customer2vendor'}{'issuetype'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 					},
-					'priority' => {'name'=>$issue->{'fields'}->{'priority'}->{'name'}},
+					'priority' => {'name'=>
+						($conversion{'customer2vendor'}{'priority'}{
+							$issue->{'fields'}->{'priority'}->{'name'}
+						} || $issue->{'fields'}->{'priority'}->{'name'})
+					},
 					%fields
 				}
 			});
