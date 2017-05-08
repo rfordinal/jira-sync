@@ -367,7 +367,11 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 								$issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 					},
-					'priority' => {'name'=>$issue->{'fields'}->{'priority'}->{'name'}},
+					'priority' => {'name'=>
+						($conversion{'vendor2customer'}{'priority'}{
+							$issue->{'fields'}->{'priority'}->{'name'}
+						} || $issue->{'fields'}->{'priority'}->{'name'})
+					},
 					'summary' => $issue->{'fields'}->{'summary'},
 					'description' => $issue->{'fields'}->{'description'} || '',
 					%fields
