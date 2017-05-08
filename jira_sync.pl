@@ -108,6 +108,11 @@ elsif ($arg{'key'})
 	exit;
 }
 
+if (!$config->{'customer'}->{'multiproject'})
+{
+	$query_customer.='AND project in ('.$customer_project.') ';
+}
+
 # vendor -> customer
 #
 
@@ -133,10 +138,10 @@ my @issues;
 if ($search_customer_do)
 {
 	print "search customer '$query_customer'\n";
-	my $jql = 'project in ('.$customer_project.') '
-		.'AND (assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
+	my $jql = '(assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
 #		.'AND issuetype in standardIssueTypes() '
 		.'AND status not in (Draft) ' # ignore drafts
+#		.'AND project in ('.$customer_project.') '
 		.$query_customer;
 #	print $jql."\n";
 	my $search = eval {$jira_customer->POST('/search', undef, {
@@ -309,8 +314,6 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		{
 #			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
 #				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
-			
-			$fields{'customfield_10002'} = $customer_account+0;
 			
 			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
 				if $issue->{'fields'}->{'duedate'};
