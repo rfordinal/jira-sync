@@ -352,16 +352,27 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
 				if $issue->{'fields'}->{'duedate'};
 			
+			# check if reporter exists
+			my $response=$jira_dst->GET('/user/search?username='.$issue->{'reporter'}, undef, {});
+			if ($response && $response->[0])
+			{
+				$fields{'reporter'} = {'name' => $response->[0]->{'name'}};
+			}
+			else
+			{
+				$fields{'reporter'} = $vendor_user;
+			}
+			
 			# creating to customer
 #			$issue->{'reporter'}=$vendor_user if $issue->{'reporter'} eq $customer_user;
 			
 			# if assigned, use assignee as vendor
-			$issue->{'assignee'}=$vendor_user if $issue->{'assignee'};
+			$fields{'assignee'}=$vendor_user if $issue->{'assignee'};
 			
 			$issue_dst=$jira_dst->POST('/issue', undef, {
 				'fields' => {
 					'project'   => { 'key' => $customer_project },
-					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
+#					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
 					'issuetype' => { 'name' =>
 						($conversion{'vendor2customer'}{'issuetype'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
