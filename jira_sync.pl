@@ -553,7 +553,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						'assignee'  => { 'name' => $vendor_user},
 						'issuetype' => { 'name' => 'Sub-task'},
 						'summary' => $sub_issue->{'fields'}->{'summary'},
-						'priority' => {'name' => $sub_issue->{'fields'}->{'priority'}->{'name'}},
+						'priority' => {'name'=>
+							($conversion{'vendor2customer'}{'priority'}{
+								$issue->{'fields'}->{'priority'}->{'name'}
+							} || $issue->{'fields'}->{'priority'}->{'name'})
+						},
+#						{'name' => $sub_issue->{'fields'}->{'priority'}->{'name'}},
 						'description' => ($sub_issue->{'fields'}->{'description'} || ''),
 						'timetracking' => {
 							'originalEstimate' => $est
@@ -1050,10 +1055,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					
 				}
 				
-				$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
+				my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
 					'transition' => $transition->{'id'},
 					%fields
 				});
+				
+				print Dumper($response);
 				
 				$issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
 			}
