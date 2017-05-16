@@ -468,6 +468,13 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	print "   . $name_opposite key $issue_dst->{'key'}\n";
 	
+	if ($issue_dst->{'fields'}->{'status'}->{'name'}=~/Closed/)
+	{
+		print "   . this is already closed issue, skip update\n";
+		$synced--;
+		next;
+	}
+	
 	if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
 	{
 #		print "   . redefine sub=0\n";
@@ -808,7 +815,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			if (!$sth->rows)
 			{
 				print "   + file '".$attachment->{'filename'}."'\n";
-				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľ]/;
+				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľÔŽÉ]/;
 				print "   = download and upload file\n";
 				my $response = $jira_src->{'rest'}->getUseragent()->get(
 					$attachment->{'content'},
@@ -982,9 +989,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		print "    : ".$name_opposite." issue in status '".$opposite_status."'\n";
 		
 		my $conversion_=$conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{$opposite_status};
-		$conversion_->{'path'}=[] unless $conversion_->{'path'};
-		push @{$conversion_->{'path'}},$conversion_->{'status'} if $conversion_->{'status'};
-		delete $conversion_->{'status'};
+#		$conversion_->{'path'}=[] unless $conversion_->{'path'};
+#		push @{$conversion_->{'path'}},$conversion_->{'status'} if $conversion_->{'status'};
+#		delete $conversion_->{'status'};
 		
 #		print Dumper($conversion_);
 		
