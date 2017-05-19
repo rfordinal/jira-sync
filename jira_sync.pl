@@ -366,8 +366,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			# creating to customer
 #			$issue->{'reporter'}=$vendor_user if $issue->{'reporter'} eq $customer_user;
 			
+#			print Dumper($issue);
 			# if assigned, use assignee as vendor
-			$fields{'assignee'}=$vendor_user if $issue->{'assignee'};
+			$fields{'assignee'}={'name' => $vendor_user} if $issue->{'fields'}->{'assignee'};
 			
 			$issue_dst=$jira_dst->POST('/issue', undef, {
 				'fields' => {
