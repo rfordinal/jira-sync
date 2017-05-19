@@ -282,6 +282,22 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		{
 			if ($issue->{'reporter'} eq $customer_user)
 			{
+				
+				my $hasmaster;
+				foreach my $master_issue(@{$issue->{'fields'}->{'issuelinks'}})
+				{
+					next unless $master_issue->{'type'}->{'name'} eq "Including";
+					next unless $master_issue->{'inwardIssue'}->{'key'}=~/^$vendor_key\-/;
+					$hasmaster=1;
+					last;
+				}
+				
+				if ($hasmaster)
+				{
+					print "   . this is sub-issue, linked to not-existing issue, skip sync\n";
+					$synced--;
+					next;
+				}
 				print "   . this is specific sub-issue, synchronized directly\n";
 			}
 			else
@@ -478,8 +494,24 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
 	{
-#		print "   . redefine sub=0\n";
-#		undef $issue->{'sub'};
+		my $master;
+		foreach my $master_issue(@{$issue->{'fields'}->{'issuelinks'}})
+		{
+			next unless $master_issue->{'type'}->{'name'} eq "Including";
+			next unless $master_issue->{'inwardIssue'}->{'key'}=~/^$vendor_key\-/;
+			
+			my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_$name=? LIMIT 1");
+				$sth->execute($master_issue->{'inwardIssue'}->{'key'});
+			my $db0_line = $sth->fetchrow_hashref();
+			
+			$master_issue->{'key_sync'} = $db0_line->{'id_'.$name_opposite};
+			if ($master_issue->{'key_sync'})
+			{
+				die "   ! move manualy to as sub-task to master ".$master_issue->{'key_sync'}."\n";
+			}
+			
+			last;
+		}
 	}
 	
 	# check original-estimated in master issue (not sub-issue)
