@@ -138,9 +138,9 @@ my @issues;
 if ($search_customer_do)
 {
 	print "search customer '$query_customer'\n";
-	my $jql = '(assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
+	my $jql = '(reporter = '.$vendor_user.' OR assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
 #		.'AND issuetype in standardIssueTypes() '
-		.'AND status not in (Draft) ' # ignore drafts
+		.'AND (status not in (Draft) OR reporter = '.$vendor_user.' ) ' # ignore drafts
 #		.'AND project in ('.$customer_project.') '
 		.$query_customer;
 #	print $jql."\n";
@@ -1032,7 +1032,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my $opposite_status=$issue_dst->{'fields'}->{'status'}->{'name'};
 		print "    : ".$name_opposite." issue in status '".$opposite_status."'\n";
 		
-		my $conversion_=$conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{$opposite_status};
+		my $conversion_=$conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{$opposite_status}
+			|| $conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{'*'};
 #		$conversion_->{'path'}=[] unless $conversion_->{'path'};
 #		push @{$conversion_->{'path'}},$conversion_->{'status'} if $conversion_->{'status'};
 #		delete $conversion_->{'status'};
