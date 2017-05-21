@@ -382,7 +382,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			}
 			else
 			{
-				$fields{'reporter'} = $vendor_user;
+				$fields{'reporter'} = {'name' => $vendor_user};
 			}
 			
 			# creating to customer
