@@ -206,6 +206,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	$issue->{'source'}=uc(substr($name,0,1));
 	
 	$issue->{'reporter'} = $issue->{'fields'}->{'reporter'}->{'name'};
+	$issue->{'assignee'} = $issue->{'fields'}->{'assignee'}->{'name'};
 	
 	$issue->{'fields'}->{'updated'}=~s|T| |;
 	$issue->{'fields'}->{'updated'}=~s|\..*$||;
@@ -300,6 +301,11 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				}
 				print "   . this is specific sub-issue, synchronized directly\n";
 			}
+			# issue assigned to customer
+			elsif ($issue->{'assignee'} eq $customer_user)
+			{
+				print "   . this is sub-issue assigned to customer, synchronized directly\n";
+			}
 			else
 			{
 				print "   . this is only sub-issue, possibly not linked to issue, skip sync\n";
@@ -384,7 +390,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			
 #			print Dumper($issue);
 			# if assigned, use assignee as vendor
-			$fields{'assignee'}={'name' => $vendor_user} if $issue->{'fields'}->{'assignee'};
+			$fields{'assignee'}={'name' => $vendor_user} if $issue->{'assignee'};
+			# if assigned to customer, then use it!
+			if ($issue->{'assignee'} eq $customer_user)
+			{
+				$fields{'assignee'}={'name' => $config->{'customer'}->{'assignee'}};
+			}
 			
 			$issue_dst=$jira_dst->POST('/issue', undef, {
 				'fields' => {
