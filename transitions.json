@@ -28,6 +28,9 @@
          "Draft->Under Review" : {
             "Resolved" : { "ok" : 1 }
          },
+         "Draft->Waiting for reporter" : {
+            "Waiting for customer" : { "ok" : 1 }
+         },
          "In Progress->Closed" : {
             "Closed" : { "ok" : 1 },
             "Resolved" : { "path" : ["Closed"]}
@@ -188,6 +191,7 @@
             "Done" : {"ok" : 1}
          },
          "In Progress->Waiting for customer" : {
+				"Draft" : {"path" : ["In Progress","Waiting for reporter"]},
             "In Progress" : {"path" : ["Waiting for reporter"]},
             "Open" : {"path" : ["In Progress","Waiting for reporter"]},
             "Waiting for reporter" : {"ok" : 1},
@@ -283,34 +287,34 @@
             "Done" : {"ok" : 1},
             "To Do" : {"path" : ["Done"]}
          },
-         "In Progress->Closed" : {
-            "Done" : {"ok" : 1},
-            "In Progress" : {"path" : ["Done"]},
-            "To Do" : {"path" : ["Done"]}
-         },
+			"In Progress->Closed" : {
+				"Done" : {"ok" : 1},
+				"*" : {"path" : ["Done"]}
+			},
          "In Progress->Open" : {
-            "In Progress" : {"path" : ["To Do"]},
-            "To Do" : {"ok" : 1}
+            "To Do" : {"ok" : 1},
+            "*" : {"path" : ["To Do"]}
          },
          "In Progress->Reopened" : {
-            "To Do" : {"ok" : 1}
+            "To Do" : {"ok" : 1},
+            "*" : {"path" : ["To Do"]}
          },
          "In Progress->Resolved" : {
-            "Done" : {"ok" : 1},
-            "In Progress" : {"path" : ["Done"]},
-            "To Do" : {"path" : ["Done"]}
+				"Done" : {"ok" : 1},
+				"*" : {"path" : ["Done"]}
          },
          "In Progress->Waiting for customer" : {
+				"To Do" : {"ok" : 1},
             "In Progress" : {"ok" : 1}
          },
          "Open->Closed" : {
             "Done" : {"ok" : 1},
             "To Do" : {"path" : ["Done"]}
          },
-         "Open->In Progress" : {
-            "In Progress" : {"ok" : 1},
-            "To Do" : {"path" : ["In Progress"]}
-         },
+			"Open->In Progress" : {
+				"In Progress" : {"ok" : 1},
+				"*" : {"path" : ["In Progress"]}
+			},
          "Open->Reopened" : {
             "To Do" : {"path" : ["In Progress"]}
          },
@@ -318,6 +322,7 @@
             "To Do" : {"path" : ["Done"]}
          },
          "Open->Waiting for customer" : {
+				"In Progress" : {"path" : ["In Progress"]},
             "To Do" : {"ok" : 1}
          },
          "Reopened->Closed" : {
