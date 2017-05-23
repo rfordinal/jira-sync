@@ -10,7 +10,7 @@ CREATE TABLE `tasks` (
   UNIQUE KEY `id_vendor_UNIQUE` (`id_vendor`),
   UNIQUE KEY `id_customer_UNIQUE` (`id_customer`),
   UNIQUE KEY `unique` (`id_customer`,`id_vendor`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 -- attachments
 
@@ -21,7 +21,7 @@ CREATE TABLE `attachments` (
   UNIQUE KEY `unique` (`issue_vendor`,`filename`,`issue_customer`),
   UNIQUE KEY `customer` (`issue_customer`,`filename`),
   UNIQUE KEY `vendor` (`issue_vendor`,`filename`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 -- comments
 
@@ -33,5 +33,5 @@ CREATE TABLE `comments` (
   UNIQUE KEY `unique` (`id_customer`,`id_vendor`) USING BTREE,
   UNIQUE KEY `id_customer_UNIQUE` (`id_customer`),
   UNIQUE KEY `id_vendor_UNIQUE` (`id_vendor`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
