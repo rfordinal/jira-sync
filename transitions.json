@@ -129,10 +129,16 @@
          }
       },
       "sub-statuspath" : {
+			"Draft->To Do" : {
+				"Open" : {"ok" : 1}
+			},
          "Done->In Progress" : {
             "In Progress" : {"ok" : 1},
             "Reopened" : {"ok" : 1}
          },
+         "Done->To Do" : {
+				"Waiting for customer" : {"ok" : 1}
+			},
          "In Progress->Done" : {
             "Closed" : {"ok" : 1},
             "Resolved" : {"ok" : 1}
@@ -323,7 +329,8 @@
          },
          "Open->Waiting for customer" : {
 				"In Progress" : {"path" : ["In Progress"]},
-            "To Do" : {"ok" : 1}
+            "To Do" : {"ok" : 1},
+            "Draft" : {"path" : ["Open","In Progress","Waiting for customer"]}
          },
          "Reopened->Closed" : {
             "In Progress" : {"path" : ["Done"]}
@@ -355,12 +362,16 @@
             "In Progress" : {"ok" : 1},
             "Done" : {"path" : ["In Progress"]}
          },
+         "Resolved->Waiting for customer" : {
+				"*" : {"path" : ["To Do"]}
+			},
          "Waiting for customer->Closed" : {
             "In Progress" : {"path" : ["Done"]},
             "To Do" : {"path" : ["Done"]}
          },
          "Waiting for customer->In Progress" : {
             "In Progress" : {"ok" : 1},
+            "Open" : {"ok" : 1},
             "To Do" : {"path" : ["In Progress"]}
          },
          "Waiting for customer->Resolved" : {
