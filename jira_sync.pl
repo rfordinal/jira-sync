@@ -342,8 +342,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			
 			# creating to vendor
 			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, {
-				'serviceDeskId' => 3,
-				'requestTypeId' => 6,
+				'serviceDeskId' => ($config->{'vendor'}->{'servicedesk'} || 1),
+				'requestTypeId' => ($config->{'vendor'}->{'servicedesk_requesttypeid'} || 6),
 				'requestFieldValues' => {
 					'summary' => $issue->{'fields'}->{'summary'},
 					'description' => '*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'},
@@ -351,7 +351,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			});
 			$jira_dst->PUT('/issue/'.$issue_dst->{'issueKey'}, undef, {
 				"fields" => {
-					'customfield_10002' => "" . $customer_account,
+					'customfield_'.$config->{'vendor'}->{'tempo_account_cf'} => "" . $customer_account,
 					'issuetype' => { 'name' =>
 						($conversion{'customer2vendor'}{'issuetype'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
@@ -570,6 +570,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		
 		foreach my $sub_issue(@{$issue->{'fields'}->{'issuelinks'}})
 		{
+#			print Dumper($sub_issue->{'type'});
 			next unless $sub_issue->{'type'}{'id'} eq $vendor_sub_issue_type;
 			$sub_issue=$sub_issue->{'outwardIssue'};
 			
