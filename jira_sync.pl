@@ -102,6 +102,12 @@ elsif ($arg{'key'}=~/^$vendor_key\-/ || $arg{'key'}=~/^$vendor_sub_key\-/)
 	$search_customer_do=0;
 	$query_vendor = 'AND key='.$arg{'key'}.' ';
 }
+elsif ($arg{'key'} && $config->{'customer'}->{'multiproject'})
+{
+	print "request for '$arg{'key'}'\n";
+	$search_vendor_do=0;
+	$query_customer = 'AND key='.$arg{'key'}.' ';
+}
 elsif ($arg{'key'})
 {
 	print "can't search for this issue key\n";
