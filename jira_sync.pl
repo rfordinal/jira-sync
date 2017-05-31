@@ -788,10 +788,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	}
 	if (!$found)
 	{
+		my $name_link=$vendor;
+			$name_link=$customer if $issue->{'source'} eq "V";
 		$jira_src->POST('/issue/'.($issue->{'key'}).'/remotelink', undef, {
 			'object' => {
 				'url' => $search_url.'/browse/'.$issue->{'key_sync'},
-				'title' => 'Remote issue '.$issue->{'key_sync'}
+				'title' => $name_link.' issue '.$issue->{'key_sync'}
 			},
 		});
 	}
