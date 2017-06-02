@@ -892,7 +892,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	$issue->{'labels'}=join ",",@{$issue->{'fields'}->{'labels'}};
 	
-	if (!$issue->{'sub'} || $issue->{'source'} eq "C" || $issue->{'labels'}=~/sync/)
+	if (!$issue->{'sub'} || $issue->{'source'} eq "C" || $issue->{'labels'}=~/sync/ ||
+		($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task'))
 	{
 		if ($issue_dst->{'fields'}->{'status'}->{'name'} ne "Closed")
 		{
