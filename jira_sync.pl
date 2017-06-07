@@ -44,6 +44,15 @@ my $jira_vendor_servicedesk = JIRA::REST->new($vendor_url, $customer_user, $conf
 	'host' => $vendor_url.'/rest/servicedeskapi'
 });
 
+
+#my $out=$jira_vendor->POST('/issueLink', undef, {
+#	"type" => {  "name" => "Including" },
+#	"inwardIssue" => { "key" => 'SLA-25' },
+#	"outwardIssue" => { "key" => 'MUZ-2' }
+#});
+#print Dumper($out);
+#exit;
+
 my $dsn = $config->{'database'}->{'dsn'};
 my $dbh = DBI->connect($dsn, $config->{'database'}->{'user'}, $config->{'database'}->{'password'});
 our $synced;
@@ -149,6 +158,7 @@ if ($search_customer_do)
 		.'AND (status not in (Draft) OR reporter = '.$vendor_user.' ) ' # ignore drafts
 		.'AND issuetype != "Epic" '
 #		.'AND project in ('.$customer_project.') '
+		.'AND issuetype != Epic '
 		.$query_customer;
 #	print $jql."\n";
 	my $search = eval {$jira_customer->POST('/search', undef, {
@@ -322,9 +332,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		}
 		if ($issue->{'source'} eq "C" && $issue->{'sub'})
 		{
-			print "   . this is only sub-issue from customer, ignoring\n";
-			$synced--;
-			next;
+#			print "   . this is only sub-issue from customer, ignoring\n";
+#			$synced--;
+#			next;
 		}
 		if ($issue->{'fields'}->{'status'}->{'name'}=~/(Closed|Cancelled|Resolved)/)
 		{
@@ -339,7 +349,78 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my %fields;
 #		print Dumper($issue);exit;
 #		print Dumper($issue);
-		if ($issue->{'source'} eq "C")
+		if ($issue->{'source'} eq "C" && $issue->{'sub'})
+		{
+			my $est=$issue->{'fields'}->{'timetracking'}->{'originalEstimate'};
+			
+			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
+				if $issue->{'fields'}->{'duedate'};
+			
+			$fields{'reporter'} = {'name' => $customer_user};
+			
+#			# if assigned, use assignee as vendor
+#			$fields{'assignee'}={'name' => $vendor_user} if $issue->{'assignee'};
+			
+			# if assigned to customer, then use it!
+#			if ($issue->{'assignee'} eq $customer_user)
+#			{
+#				$fields{'assignee'}={'name' => $config->{'customer'}->{'assignee'}};
+#			}
+			
+			my $sync_parent;
+			if ($issue->{'fields'}->{'parent'}->{'key'})
+			{
+				print "   . $name parent issue ".$issue->{'fields'}->{'parent'}->{'key'}."\n";
+				my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_$name=? LIMIT 1");
+					$sth->execute($issue->{'fields'}->{'parent'}->{'key'});
+				my $db0_line = $sth->fetchrow_hashref();
+				$sync_parent=$db0_line->{'id_'.$name_opposite};
+				print "   . $name_opposite parent issue is ".$sync_parent."\n";
+			}
+			
+			my $data={
+				'fields' => {
+					'project'   => { 'key' => $vendor_sub_project },
+#					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
+					'issuetype' => { 'name' =>
+						($conversion{'customer2vendor'}{'issuetype'}{
+								$issue->{'fields'}->{'issuetype'}->{'name'}
+							} || 'Task')
+					},
+					'priority' => {'name'=>
+						($conversion{'customer2vendor'}{'priority'}{
+							$issue->{'fields'}->{'priority'}->{'name'}
+						} || $issue->{'fields'}->{'priority'}->{'name'})
+					},
+					'summary' => $issue->{'fields'}->{'summary'},
+					'description' => $issue->{'fields'}->{'description'} || '',
+					'timetracking' => {
+						'originalEstimate' => $est
+#							"remainingEstimate": "5"
+					},
+					%fields
+				},
+			};
+			
+#			print Dumper($data);
+#			last;
+			
+			$issue_dst=$jira_dst->POST('/issue', undef, $data);
+#			print Dumper($issue_dst);
+#			print "   . get issue ".$issue_dst->{'key'}."\n";
+			$issue_dst=$jira_dst->GET('/issue/'.$issue_dst->{'key'}, undef);
+			if ($sync_parent)
+			{
+				print "   . link issue ".$sync_parent.' to '.$issue_dst->{'key'}."\n";
+				$jira_vendor->POST('/issueLink', undef, {
+					"type" => {  "name" => "Including" },
+					"inwardIssue" => { "key" => $sync_parent },
+					"outwardIssue" => { "key" => $issue_dst->{'key'} },
+				});
+			}
+#			next;
+		}
+		elsif ($issue->{'source'} eq "C")
 		{
 #			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
 #				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
