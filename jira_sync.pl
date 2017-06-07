@@ -147,6 +147,7 @@ if ($search_customer_do)
 	my $jql = '(reporter = '.$vendor_user.' OR assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
 #		.'AND issuetype in standardIssueTypes() '
 		.'AND (status not in (Draft) OR reporter = '.$vendor_user.' ) ' # ignore drafts
+		.'AND issuetype != "Epic" '
 #		.'AND project in ('.$customer_project.') '
 		.$query_customer;
 #	print $jql."\n";
