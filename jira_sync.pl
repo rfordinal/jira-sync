@@ -465,11 +465,11 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			my $response=$jira_dst->GET('/user/search?username='.$issue->{'reporter'}, undef, {});
 			if ($response && $response->[0])
 			{
-				$fields{'reporter'} = {'name' => $response->[0]->{'name'}};
+#				$fields{'reporter'} = {'name' => $response->[0]->{'name'}};
 			}
 			else
 			{
-				$fields{'reporter'} = {'name' => $vendor_user};
+#				$fields{'reporter'} = {'name' => $vendor_user};
 			}
 			
 			# creating to customer
@@ -657,9 +657,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		
 		foreach my $sub_issue(@{$issue->{'fields'}->{'issuelinks'}})
 		{
-#			print Dumper($sub_issue->{'type'});
 			next unless $sub_issue->{'type'}{'id'} eq $vendor_sub_issue_type;
 			$sub_issue=$sub_issue->{'outwardIssue'};
+			next unless $sub_issue->{'key'};
 			
 			my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_vendor=? LIMIT 1");
 				$sth->execute($sub_issue->{'key'});
@@ -688,7 +688,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					'fields' => {
 						'parent' => {'key' => $issue->{'key_sync'}},
 						'project'   => { 'key' => $customer_project },
-						'reporter'  => { 'name' => $vendor_user},
+#						'reporter'  => { 'name' => $vendor_user},
 						'assignee'  => { 'name' => $vendor_user},
 						'issuetype' => { 'name' => 'Sub-task'},
 						'summary' => $sub_issue->{'fields'}->{'summary'},
@@ -925,12 +925,16 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				|| (int($issue_dst->{'fields'}->{'aggregatetimeestimate'}/60) ne int($issue->{'fields'}->{'aggregatetimeestimate'}/60)))
 			{
 				print "   = update worklog to ".int($issue->{'fields'}->{'aggregatetimespent'}/60)."m\n";
-				$jira_dst->PUT('/issue/'.($issue_dst->{'key'}).'/worklog/'.$found
+				eval {$jira_dst->PUT('/issue/'.($issue_dst->{'key'}).'/worklog/'.$found
 					.'?adjustEstimate=new&newEstimate='.int($issue->{'fields'}->{'aggregatetimeestimate'}/60).'m'
 					, undef, {
 					'comment' => "JIRA Comsultia _aggregate summary_",
 					'timeSpentSeconds' => $issue->{'fields'}->{'aggregatetimespent'},
-				});
+				})};
+				if ($@)
+				{
+					print "   ! error update worklog\n";
+				}
 			}
 		}
 		elsif ($issue->{'fields'}->{'aggregatetimeestimate'})
@@ -1095,11 +1099,22 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	if (keys %fields)
 	{
-		$jira_dst->PUT('/issue/'.$issue->{'key_sync'}, undef, {
+		eval {$jira_dst->PUT('/issue/'.$issue->{'key_sync'}, undef, {
 			"fields" => {
 				%fields
 			}
-		});
+		})};
+		if ($@)
+		{
+			print " error $@\n";
+			if ($config->{'ignore'})
+			{
+			}
+			else
+			{
+				die $@;
+			}
+		}
 	}
 	
 	%fields=();
