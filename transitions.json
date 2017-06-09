@@ -1,7 +1,7 @@
 {
    "customer2vendor" : {
       "issuetype" : {
-         "Bug" : "Fault",
+         "Bug" : "Problem",
          "Epic" : "Epic",
          "Fault" : "Fault",
          "Task" : "Change"
@@ -41,6 +41,7 @@
             "Waiting for support" : { "path" : ["Resolved"]}
          },
          "In Progress->Under Review" : {
+				"In Progress" : {"path" : ["Resolved"]},
             "Resolved" : {"ok" : 1}
          },
          "In Progress->Waiting for reporter" : {
@@ -200,10 +201,6 @@
             "Open" : { "path" : ["In Progress","Under Review"]},
             "Under Review" : { "ok" : 1}
          },
-         "In Progress->Closed" : {
-            "Closed" : {"ok" : 1},
-            "Done" : {"ok" : 1}
-         },
          "In Progress->Waiting for customer" : {
 				"Draft" : {"path" : ["In Progress","Waiting for reporter"]},
             "In Progress" : {"path" : ["Waiting for reporter"]},
@@ -267,15 +264,18 @@
          "Waiting for support->Closed" : {
             "Cancelled" : {"ok" : 1},
             "Closed" : {"ok" : 1},
+            "Under Review" : {"path" : ["Closed"]},
             "Open" : {"path" : ["In Progress","Under Review","Done","Closed"]},
             "Done" : {"path" : ["Closed"]},
             "Rejected" : {"path" : ["In Progress","Under Review","Done","Closed"]}
          },
          "Waiting for support->In Progress" : {
             "In Progress" : {"ok" : 1},
-            "Done" : {"ok" : 1},
-            "Under Review" : {"path" : ["Rejected","In Progress"]},
-            "*" : {"path" : ["In Progress"]}
+            "Draft" : {"path" : ["Open","In Progress"]},
+            "Open" : {"path" : ["In Progress"]},
+            "Rejected" : {"path" : ["In Progress"]},
+            "Waiting for reporter" : {"path" : ["In Progress"]},
+            "Done" : {"ok" : 1}
          },
          "Waiting for support->Resolved" : {
             "Closed" : {"ok" : 1},
@@ -286,6 +286,7 @@
             "Rejected" : {"path" : ["In Progress","Under Review"]}
          },
          "Waiting for support->Waiting for customer" : {
+				"Draft" : {"path" : ["To Plan","In Progress","Waiting for reporter"]},
             "In Progress" : {"path" : ["Waiting for reporter"]},
             "Waiting for reporter" : {"path" : ["In Progress","Waiting for reporter"]},
             "Open" : {"path" : ["In Progress"]},
