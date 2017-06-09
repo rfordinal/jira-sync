@@ -142,9 +142,11 @@
             "Reopened" : {"ok" : 1}
          },
          "Done->To Do" : {
+				"Resolved" : {"path" : ["Reopened"]},
 				"Waiting for customer" : {"ok" : 1}
 			},
          "In Progress->Done" : {
+				"Reopened" : {"path" : ["Resolved"]},
             "Closed" : {"ok" : 1},
             "Resolved" : {"ok" : 1}
          },
