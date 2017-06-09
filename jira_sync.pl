@@ -40,19 +40,8 @@ my $vendor=$config->{'vendor'}->{'name'};
 
 my $jira_customer = JIRA::REST->new($customer_url, $vendor_user, $config->{'vendor'}->{'password'});
 my $jira_vendor = JIRA::REST->new($vendor_url, $customer_user, $config->{'customer'}->{'password'});
-my $jira_vendor_servicedesk = JIRA::REST->new($vendor_url, $customer_user, $config->{'customer'}->{'password'},{
-	'host' => $vendor_url.'/rest/servicedeskapi'
-});
-
-
-#my $out=$jira_vendor->POST('/issueLink', undef, {
-#	"type" => {  "name" => "Including" },
-#	"inwardIssue" => { "key" => 'SLA-25' },
-#	"outwardIssue" => { "key" => 'MUZ-2' }
-#});
-#print Dumper($out);
+my $jira_vendor_servicedesk = JIRA::REST->new($vendor_url.'/rest/servicedeskapi',$customer_user, $config->{'customer'}->{'password'});
 #exit;
-
 my $dsn = $config->{'database'}->{'dsn'};
 my $dbh = DBI->connect($dsn, $config->{'database'}->{'user'}, $config->{'database'}->{'password'});
 our $synced;
@@ -154,11 +143,8 @@ if ($search_customer_do)
 {
 	print "search customer '$query_customer'\n";
 	my $jql = '(reporter = '.$vendor_user.' OR assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
-#		.'AND issuetype in standardIssueTypes() '
 		.'AND (status not in (Draft) OR reporter = '.$vendor_user.' ) ' # ignore drafts
 		.'AND issuetype != "Epic" '
-#		.'AND project in ('.$customer_project.') '
-		.'AND issuetype != Epic '
 		.$query_customer;
 #	print $jql."\n";
 	my $search = eval {$jira_customer->POST('/search', undef, {
@@ -332,9 +318,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		}
 		if ($issue->{'source'} eq "C" && $issue->{'sub'})
 		{
-#			print "   . this is only sub-issue from customer, ignoring\n";
-#			$synced--;
-#			next;
+			print "   . this is only sub-issue from customer, ignoring\n";
+			$synced--;
+			next;
 		}
 		if ($issue->{'fields'}->{'status'}->{'name'}=~/(Closed|Cancelled|Resolved)/)
 		{
@@ -950,7 +936,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			if (!$sth->rows)
 			{
 				print "   + file '".$attachment->{'filename'}."'\n";
-				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľÔŽÉ]/;
+#				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľÔŽÉ]/;
 				print "   = download and upload file\n";
 				my $response = $jira_src->{'rest'}->getUseragent()->get(
 					$attachment->{'content'},
@@ -958,17 +944,27 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					'X-Atlassian-Token' => 'nocheck',
 				);
 				
-				open(TMP,'>temp/'.$attachment->{'filename'});
+				chdir('temp');
+				
+				open(TMP,'>'.$attachment->{'filename'});
 				binmode(TMP);
 				print TMP $response->decoded_content;
 				close (TMP);
 				
-				$jira_dst->attach_files($issue->{'key_sync'}, 'temp/'.$attachment->{'filename'});
 				
-				unlink 'temp/'.$attachment->{'filename'};
+				print "   = downloaded, uploading\n";
+				eval {
+					$jira_dst->attach_files($issue->{'key_sync'}, $attachment->{'filename'});
+					
+					unlink $attachment->{'filename'};
+					
+					my $sth = $dbh->prepare("REPLACE INTO attachments (issue_$name,issue_$name_opposite,filename) VALUES (?,?,?)");
+						$sth->execute($issue->{'key'},$issue->{'key_sync'},$attachment->{'filename'});
+				};
 				
-				my $sth = $dbh->prepare("REPLACE INTO attachments (issue_$name,issue_$name_opposite,filename) VALUES (?,?,?)");
-					$sth->execute($issue->{'key'},$issue->{'key_sync'},$attachment->{'filename'});
+				unlink $attachment->{'filename'};
+				
+				chdir "..";
 			}
 		}
 	
