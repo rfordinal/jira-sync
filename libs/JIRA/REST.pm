@@ -82,7 +82,7 @@ sub new {
     my $rest = REST::Client->new($args{rest_client_config});
 
     # Set default base URL
-    print $args{'url'}."\n";
+#    print $args{'url'}."\n";
     $rest->setHost($args{url});# unless $args{'rest_client_config'}->{'host'};
 
     # Follow redirects/authentication by default
