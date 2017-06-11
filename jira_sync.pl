@@ -40,10 +40,8 @@ my $vendor=$config->{'vendor'}->{'name'};
 
 my $jira_customer = JIRA::REST->new($customer_url, $vendor_user, $config->{'vendor'}->{'password'});
 my $jira_vendor = JIRA::REST->new($vendor_url, $customer_user, $config->{'customer'}->{'password'});
-my $jira_vendor_servicedesk = JIRA::REST->new($vendor_url, $customer_user, $config->{'customer'}->{'password'},{
-	'host' => $vendor_url.'/rest/servicedeskapi'
-});
-
+my $jira_vendor_servicedesk = JIRA::REST->new($vendor_url.'/rest/servicedeskapi',$customer_user, $config->{'customer'}->{'password'});
+#exit;
 my $dsn = $config->{'database'}->{'dsn'};
 my $dbh = DBI->connect($dsn, $config->{'database'}->{'user'}, $config->{'database'}->{'password'});
 our $synced;
@@ -102,6 +100,12 @@ elsif ($arg{'key'}=~/^$vendor_key\-/ || $arg{'key'}=~/^$vendor_sub_key\-/)
 	$search_customer_do=0;
 	$query_vendor = 'AND key='.$arg{'key'}.' ';
 }
+elsif ($arg{'key'} && $config->{'customer'}->{'multiproject'})
+{
+	print "request for '$arg{'key'}'\n";
+	$search_vendor_do=0;
+	$query_customer = 'AND key='.$arg{'key'}.' ';
+}
 elsif ($arg{'key'})
 {
 	print "can't search for this issue key\n";
@@ -138,10 +142,9 @@ my @issues;
 if ($search_customer_do)
 {
 	print "search customer '$query_customer'\n";
-	my $jql = '(assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
-#		.'AND issuetype in standardIssueTypes() '
-		.'AND status not in (Draft) ' # ignore drafts
-#		.'AND project in ('.$customer_project.') '
+	my $jql = '(reporter = '.$vendor_user.' OR assignee = '.$vendor_user.' OR Contributors in ('.$vendor_user.') ) ' # assigned to vendor
+		.'AND (status not in (Draft) OR reporter = '.$vendor_user.' ) ' # ignore drafts
+		.'AND issuetype != "Epic" '
 		.$query_customer;
 #	print $jql."\n";
 	my $search = eval {$jira_customer->POST('/search', undef, {
@@ -206,6 +209,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	$issue->{'source'}=uc(substr($name,0,1));
 	
 	$issue->{'reporter'} = $issue->{'fields'}->{'reporter'}->{'name'};
+	$issue->{'assignee'} = $issue->{'fields'}->{'assignee'}->{'name'};
 	
 	$issue->{'fields'}->{'updated'}=~s|T| |;
 	$issue->{'fields'}->{'updated'}=~s|\..*$||;
@@ -282,7 +286,28 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		{
 			if ($issue->{'reporter'} eq $customer_user)
 			{
+				
+				my $hasmaster;
+				foreach my $master_issue(@{$issue->{'fields'}->{'issuelinks'}})
+				{
+					next unless $master_issue->{'type'}->{'name'} eq "Including";
+					next unless $master_issue->{'inwardIssue'}->{'key'}=~/^$vendor_key\-/;
+					$hasmaster=1;
+					last;
+				}
+				
+				if ($hasmaster)
+				{
+					print "   . this is sub-issue, linked to not-existing issue, skip sync\n";
+					$synced--;
+					next;
+				}
 				print "   . this is specific sub-issue, synchronized directly\n";
+			}
+			# issue assigned to customer
+			elsif ($issue->{'assignee'} eq $customer_user)
+			{
+				print "   . this is sub-issue assigned to customer, synchronized directly\n";
 			}
 			else
 			{
@@ -310,7 +335,78 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my %fields;
 #		print Dumper($issue);exit;
 #		print Dumper($issue);
-		if ($issue->{'source'} eq "C")
+		if ($issue->{'source'} eq "C" && $issue->{'sub'})
+		{
+			my $est=$issue->{'fields'}->{'timetracking'}->{'originalEstimate'};
+			
+			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
+				if $issue->{'fields'}->{'duedate'};
+			
+			$fields{'reporter'} = {'name' => $customer_user};
+			
+#			# if assigned, use assignee as vendor
+#			$fields{'assignee'}={'name' => $vendor_user} if $issue->{'assignee'};
+			
+			# if assigned to customer, then use it!
+#			if ($issue->{'assignee'} eq $customer_user)
+#			{
+#				$fields{'assignee'}={'name' => $config->{'customer'}->{'assignee'}};
+#			}
+			
+			my $sync_parent;
+			if ($issue->{'fields'}->{'parent'}->{'key'})
+			{
+				print "   . $name parent issue ".$issue->{'fields'}->{'parent'}->{'key'}."\n";
+				my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_$name=? LIMIT 1");
+					$sth->execute($issue->{'fields'}->{'parent'}->{'key'});
+				my $db0_line = $sth->fetchrow_hashref();
+				$sync_parent=$db0_line->{'id_'.$name_opposite};
+				print "   . $name_opposite parent issue is ".$sync_parent."\n";
+			}
+			
+			my $data={
+				'fields' => {
+					'project'   => { 'key' => $vendor_sub_project },
+#					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
+					'issuetype' => { 'name' =>
+						($conversion{'customer2vendor'}{'issuetype'}{
+								$issue->{'fields'}->{'issuetype'}->{'name'}
+							} || 'Task')
+					},
+					'priority' => {'name'=>
+						($conversion{'customer2vendor'}{'priority'}{
+							$issue->{'fields'}->{'priority'}->{'name'}
+						} || $issue->{'fields'}->{'priority'}->{'name'})
+					},
+					'summary' => $issue->{'fields'}->{'summary'},
+					'description' => $issue->{'fields'}->{'description'} || '',
+					'timetracking' => {
+						'originalEstimate' => $est
+#							"remainingEstimate": "5"
+					},
+					%fields
+				},
+			};
+			
+#			print Dumper($data);
+#			last;
+			
+			$issue_dst=$jira_dst->POST('/issue', undef, $data);
+#			print Dumper($issue_dst);
+#			print "   . get issue ".$issue_dst->{'key'}."\n";
+			$issue_dst=$jira_dst->GET('/issue/'.$issue_dst->{'key'}, undef);
+			if ($sync_parent)
+			{
+				print "   . link issue ".$sync_parent.' to '.$issue_dst->{'key'}."\n";
+				$jira_vendor->POST('/issueLink', undef, {
+					"type" => {  "name" => "Including" },
+					"inwardIssue" => { "key" => $sync_parent },
+					"outwardIssue" => { "key" => $issue_dst->{'key'} },
+				});
+			}
+#			next;
+		}
+		elsif ($issue->{'source'} eq "C")
 		{
 #			$fields{'customfield_10106'}=$issue->{'fields'}->{'customfield_10005'}
 #				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
@@ -320,8 +416,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			
 			# creating to vendor
 			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, {
-				'serviceDeskId' => 3,
-				'requestTypeId' => 6,
+				'serviceDeskId' => ($config->{'vendor'}->{'servicedesk'} || 1),
+				'requestTypeId' => ($config->{'vendor'}->{'servicedesk_requesttypeid'} || 6),
 				'requestFieldValues' => {
 					'summary' => $issue->{'fields'}->{'summary'},
 					'description' => '*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'},
@@ -329,7 +425,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			});
 			$jira_dst->PUT('/issue/'.$issue_dst->{'issueKey'}, undef, {
 				"fields" => {
-					'customfield_10002' => "" . $customer_account,
+					'customfield_'.$config->{'vendor'}->{'tempo_account_cf'} => "" . $customer_account,
 					'issuetype' => { 'name' =>
 						($conversion{'customer2vendor'}{'issuetype'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
@@ -356,18 +452,24 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			my $response=$jira_dst->GET('/user/search?username='.$issue->{'reporter'}, undef, {});
 			if ($response && $response->[0])
 			{
-				$fields{'reporter'} = {'name' => $response->[0]->{'name'}};
+#				$fields{'reporter'} = {'name' => $response->[0]->{'name'}};
 			}
 			else
 			{
-				$fields{'reporter'} = {'name' => $vendor_user};
+#				$fields{'reporter'} = {'name' => $vendor_user};
 			}
 			
 			# creating to customer
 #			$issue->{'reporter'}=$vendor_user if $issue->{'reporter'} eq $customer_user;
 			
+#			print Dumper($issue);
 			# if assigned, use assignee as vendor
-			$fields{'assignee'}=$vendor_user if $issue->{'assignee'};
+			$fields{'assignee'}={'name' => $vendor_user} if $issue->{'assignee'};
+			# if assigned to customer, then use it!
+			if ($issue->{'assignee'} eq $customer_user)
+			{
+				$fields{'assignee'}={'name' => $config->{'customer'}->{'assignee'}};
+			}
 			
 			$issue_dst=$jira_dst->POST('/issue', undef, {
 				'fields' => {
@@ -477,8 +579,24 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
 	{
-#		print "   . redefine sub=0\n";
-#		undef $issue->{'sub'};
+		my $master;
+		foreach my $master_issue(@{$issue->{'fields'}->{'issuelinks'}})
+		{
+			next unless $master_issue->{'type'}->{'name'} eq "Including";
+			next unless $master_issue->{'inwardIssue'}->{'key'}=~/^$vendor_key\-/;
+			
+			my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_$name=? LIMIT 1");
+				$sth->execute($master_issue->{'inwardIssue'}->{'key'});
+			my $db0_line = $sth->fetchrow_hashref();
+			
+			$master_issue->{'key_sync'} = $db0_line->{'id_'.$name_opposite};
+			if ($master_issue->{'key_sync'})
+			{
+				die "   ! move manualy to as sub-task to master ".$master_issue->{'key_sync'}."\n";
+			}
+			
+			last;
+		}
 	}
 	
 	# check original-estimated in master issue (not sub-issue)
@@ -528,6 +646,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		{
 			next unless $sub_issue->{'type'}{'id'} eq $vendor_sub_issue_type;
 			$sub_issue=$sub_issue->{'outwardIssue'};
+			next unless $sub_issue->{'key'};
 			
 			my $sth = $dbh->prepare("SELECT * FROM tasks WHERE id_vendor=? LIMIT 1");
 				$sth->execute($sub_issue->{'key'});
@@ -556,7 +675,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					'fields' => {
 						'parent' => {'key' => $issue->{'key_sync'}},
 						'project'   => { 'key' => $customer_project },
-						'reporter'  => { 'name' => $vendor_user},
+#						'reporter'  => { 'name' => $vendor_user},
 						'assignee'  => { 'name' => $vendor_user},
 						'issuetype' => { 'name' => 'Sub-task'},
 						'summary' => $sub_issue->{'fields'}->{'summary'},
@@ -748,10 +867,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	}
 	if (!$found)
 	{
+		my $name_link=$vendor;
+			$name_link=$customer if $issue->{'source'} eq "V";
 		$jira_src->POST('/issue/'.($issue->{'key'}).'/remotelink', undef, {
 			'object' => {
 				'url' => $search_url.'/browse/'.$issue->{'key_sync'},
-				'title' => 'Remote issue '.$issue->{'key_sync'}
+				'title' => $name_link.' issue '.$issue->{'key_sync'}
 			},
 		});
 	}
@@ -796,12 +917,16 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				|| (int($issue_dst->{'fields'}->{'aggregatetimeestimate'}/60) ne int($issue->{'fields'}->{'aggregatetimeestimate'}/60)))
 			{
 				print "   = update worklog to ".int($issue->{'fields'}->{'aggregatetimespent'}/60)."m\n";
-				$jira_dst->PUT('/issue/'.($issue_dst->{'key'}).'/worklog/'.$found
+				eval {$jira_dst->PUT('/issue/'.($issue_dst->{'key'}).'/worklog/'.$found
 					.'?adjustEstimate=new&newEstimate='.int($issue->{'fields'}->{'aggregatetimeestimate'}/60).'m'
 					, undef, {
 					'comment' => "JIRA Comsultia _aggregate summary_",
 					'timeSpentSeconds' => $issue->{'fields'}->{'aggregatetimespent'},
-				});
+				})};
+				if ($@)
+				{
+					print "   ! error update worklog\n";
+				}
 			}
 		}
 		elsif ($issue->{'fields'}->{'aggregatetimeestimate'})
@@ -820,7 +945,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			if (!$sth->rows)
 			{
 				print "   + file '".$attachment->{'filename'}."'\n";
-				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľÔŽÉ]/;
+#				next if $attachment->{'filename'}=~/[á́éíóúčšžďťňľÔŽÉ]/;
 				print "   = download and upload file\n";
 				my $response = $jira_src->{'rest'}->getUseragent()->get(
 					$attachment->{'content'},
@@ -828,23 +953,34 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					'X-Atlassian-Token' => 'nocheck',
 				);
 				
-				open(TMP,'>temp/'.$attachment->{'filename'});
+				chdir('temp');
+				
+				open(TMP,'>'.$attachment->{'filename'});
 				binmode(TMP);
 				print TMP $response->decoded_content;
 				close (TMP);
 				
-				$jira_dst->attach_files($issue->{'key_sync'}, 'temp/'.$attachment->{'filename'});
 				
-				unlink 'temp/'.$attachment->{'filename'};
+				print "   = downloaded, uploading\n";
+				eval {
+					$jira_dst->attach_files($issue->{'key_sync'}, $attachment->{'filename'});
+					
+					unlink $attachment->{'filename'};
+					
+					my $sth = $dbh->prepare("REPLACE INTO attachments (issue_$name,issue_$name_opposite,filename) VALUES (?,?,?)");
+						$sth->execute($issue->{'key'},$issue->{'key_sync'},$attachment->{'filename'});
+				};
 				
-				my $sth = $dbh->prepare("REPLACE INTO attachments (issue_$name,issue_$name_opposite,filename) VALUES (?,?,?)");
-					$sth->execute($issue->{'key'},$issue->{'key_sync'},$attachment->{'filename'});
+				unlink $attachment->{'filename'};
+				
+				chdir "..";
 			}
 		}
 	
 	$issue->{'labels'}=join ",",@{$issue->{'fields'}->{'labels'}};
 	
-	if (!$issue->{'sub'} || $issue->{'source'} eq "C" || $issue->{'labels'}=~/sync/)
+	if (!$issue->{'sub'} || $issue->{'source'} eq "C" || $issue->{'labels'}=~/sync/ ||
+		($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task'))
 	{
 		if ($issue_dst->{'fields'}->{'status'}->{'name'} ne "Closed")
 		{
@@ -965,11 +1101,22 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	if (keys %fields)
 	{
-		$jira_dst->PUT('/issue/'.$issue->{'key_sync'}, undef, {
+		eval {$jira_dst->PUT('/issue/'.$issue->{'key_sync'}, undef, {
 			"fields" => {
 				%fields
 			}
-		});
+		})};
+		if ($@)
+		{
+			print " error $@\n";
+			if ($config->{'ignore'})
+			{
+			}
+			else
+			{
+				die $@;
+			}
+		}
 	}
 	
 	%fields=();
@@ -993,7 +1140,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my $opposite_status=$issue_dst->{'fields'}->{'status'}->{'name'};
 		print "    : ".$name_opposite." issue in status '".$opposite_status."'\n";
 		
-		my $conversion_=$conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{$opposite_status};
+		my $conversion_=$conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{$opposite_status}
+			|| $conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{'*'};
 #		$conversion_->{'path'}=[] unless $conversion_->{'path'};
 #		push @{$conversion_->{'path'}},$conversion_->{'status'} if $conversion_->{'status'};
 #		delete $conversion_->{'status'};
