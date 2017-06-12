@@ -73,7 +73,7 @@
 					"2task" : {
 						"*->In Progress" : "In Progress",
 						"*->Resolved" : "Under Review",
-						"*->Closed" : "Closed",
+						"*->Closed" : ["Closed","Cancelled"],
 						"Waiting for customer->Waiting for support" : "In Progress",
 						"*->Waiting for customer" : "Waiting for reporter",
 						"Resolved->Waiting for support" : "Rejected"
