@@ -575,7 +575,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	}
 	
 	# check original-estimated in master issue (not sub-issue)
-	if (!$issue->{'sub'} && $issue->{'source'} eq "V")
+	if (!$issue->{'sub'} && $issue->{'source'} eq "V"
+		&& $issue_dst->{'fields'}->{'assignee'} eq $vendor_user)
 	{
 		my $est=$issue->{'fields'}->{'timetracking'}->{'originalEstimate'};
 		my $est_dst=$issue_dst->{'fields'}->{'timetracking'}->{'originalEstimate'};
