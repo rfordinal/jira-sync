@@ -549,7 +549,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	$issue_dst->{'sub'}=0;
 	$issue_dst->{'sub'}=1 if (
-		($issue_dst->{'source'} eq "V" && $issue->{'key'}=~/^$vendor_sub_key/)
+		($issue_dst->{'source'} eq "V" && $issue_dst->{'key'}=~/^$vendor_sub_key/)
 		|| ($issue_dst->{'fields'}->{'issuetype'}->{'name'} eq 'Sub-task'));
 	
 	if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
@@ -1120,6 +1120,21 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		{
 			print "    : unknown transition $issuetype - $fromto - $towhat - ".$path."\n";
 			die "unknown path";
+		}
+		
+		if (ref($dst_status) eq "ARRAY")
+		{
+			my $found;
+			foreach (@{$dst_status})
+			{
+				if ($opposite_status eq $_)
+				{
+					$dst_status = $_;
+					$found=1;
+					last;
+				}
+			}
+			$dst_status=$dst_status->[0] unless $found;
 		}
 		
 		if ($opposite_status eq $dst_status)

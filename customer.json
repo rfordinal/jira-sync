@@ -92,12 +92,13 @@
 			"transition" : {
 				"vendor2customer" : {
 					"2subtask" : {
-						"*->Resolved" : "Done"
-					},
-					"subtask2" : {
-						"*->To Do" : "Open",
-						"*->In Progress" : "In Progress",
-						"*->Done" : "Resolved"
+						"*->Resolved" : "Done",
+						"*->Reopened" : "In Progress"
+					}
+				},
+				"customer2vendor" : {
+					"2subtask" : {
+						"Done->In Progress" : ["In Progress","Reopened"]
 					}
 				}
 			}
