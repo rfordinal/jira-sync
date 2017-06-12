@@ -93,7 +93,8 @@
 				"vendor2customer" : {
 					"2subtask" : {
 						"*->Resolved" : "Done",
-						"*->Reopened" : "In Progress"
+						"*->Reopened" : "In Progress",
+						"*->In Progress" : ["In Progress"]
 					}
 				},
 				"customer2vendor" : {
