@@ -1,0 +1,106 @@
+{
+	"issuetype-conversion" : {
+		"customer2vendor" : {
+			"Task" : "Change"
+		},
+		"vendor2customer" : {
+			"Change" : "Task"
+		}
+	},
+	"resolution" : {
+		"customer2vendor" : {
+			"Done" : "Done"
+		},
+		"vendor2customer" : {
+			"Done" : "Done"
+		}
+	},
+	"priority" : {
+		"customer2vendor" : {
+			"Blocker" : "Blocker",
+			"Critical" : "Critical",
+			"Major" : "Major",
+			"Minor" : "Minor",
+			"Trivial" : "Trivial"
+		},
+		"vendor2customer" : {
+			"Blocker" : "Blocker",
+			"Critical" : "Critical",
+			"Major" : "Major",
+			"Minor" : "Minor",
+			"Trivial" : "Trivial"
+		}
+	},
+	"issuetype" : {
+		"task" : {
+			"workflow" : {
+				"Bug" : {
+					"Open" : ["In Progress","Canceled"],
+					"In Progress" : ["Under review","Waiting for reporter"],
+					"Under review" : ["Done","Rejected"],
+					"Waiting for reporter" : ["In Progress"],
+					"Done" : ["Closed"],
+					"Canceled" : ["Open"],
+					"Rejected" : ["In Progress"]
+				},
+				"*" : {
+					"Open" : ["In Progress"],
+					"In Progress" : ["Under review","Waiting for reporter"],
+					"Under review" : ["Done","Rejected"],
+					"Waiting for reporter" : ["In Progress"],
+					"Done" : ["Closed"],
+					"Closed" : ["Reopened"],
+					"Cancelled" : ["Draft"],
+					"Rejected" : ["In Progress"],
+					"Draft" : ["Open","Cancelled","In Progress"]
+				}
+			},
+			"transition" : {
+				"customer2vendor" : {
+					"2task" : {
+						"*->In Progress" : "In Progress",
+						"In Progress->Under Review" : "Resolved",
+						"Under Review->Resolved" : "Resolved",
+						"*->Done" : "Resolved",
+						"Resolved->Rejected" : "Waiting for support",
+						"*->Waiting for reporter" : "Waiting for customer",
+						"Waiting for support->Waiting for reporter" : "Waiting for customer"
+					},
+					"2subtask" : {
+					}
+				},
+				"vendor2customer" : {
+					"2task" : {
+						"*->In Progress" : "In Progress",
+						"*->Resolved" : "Under Review",
+						"*->Closed" : "Closed",
+						"Waiting for customer->Waiting for support" : "In Progress",
+						"*->Waiting for customer" : "Waiting for reporter",
+						"Resolved->Waiting for support" : "Rejected"
+					}
+				}
+			}
+		},
+		"subtask" : {
+			"workflow" : {
+				"*" : {
+					"To Do" : ["In Progress","Done"],
+					"In Progress" : ["To Do","Done"],
+					"Done" : ["In Progress","To Do"]
+				}
+			},
+			"transition" : {
+				"vendor2customer" : {
+					"2subtask" : {
+						"*->Resolved" : "Done"
+					},
+					"subtask2" : {
+						"*->To Do" : "Open",
+						"*->In Progress" : "In Progress",
+						"*->Done" : "Resolved"
+					}
+				}
+			}
+		}
+	}
+}

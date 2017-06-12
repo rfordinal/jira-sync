@@ -1,0 +1,26 @@
+{
+	"task" : {
+		"workflows" : {
+			"*" : {
+				"Open" : ["Waiting for customer","In Progress","Resolved","Closed"],
+				"In Progress" : ["Open","Waiting for customer","Resolved","Closed"],
+				"Resolved" : ["Closed","Reopened"],
+				"Reopened" : ["Waiting for customer","Resolved","Closed","In Progress"],
+				"Closed" : ["Reopened"],
+				"Waiting for customer" : ["Resolved","In Progress"]
+			}
+		}
+	},
+	"subtask" : {
+		"workflows" : {
+			"*" : {
+				"Open" : ["Waiting for customer","In Progress","Resolved","Closed"],
+				"In Progress" : ["Open","Waiting for customer","Resolved","Closed"],
+				"Resolved" : ["Closed","Reopened"],
+				"Reopened" : ["Waiting for customer","Resolved","Closed","In Progress"],
+				"Closed" : ["Reopened"],
+				"Waiting for customer" : ["Resolved","In Progress"]
+			}
+		}
+	}
+}

@@ -46,12 +46,10 @@ my $dsn = $config->{'database'}->{'dsn'};
 my $dbh = DBI->connect($dsn, $config->{'database'}->{'user'}, $config->{'database'}->{'password'});
 our $synced;
 
-our %conversion;
-do {
-	local $/;
-	open( my $fh, '<', 'transitions.json' );
-	%conversion = %{decode_json( <$fh> )};
-};
+our %vendor_conf;
+do {local $/;open( my $fh, '<', 'vendor.json' );%vendor_conf = %{decode_json( <$fh> )};};
+our %customer_conf;
+do {local $/;open( my $fh, '<', 'customer.json' );%customer_conf = %{decode_json( <$fh> )};};
 
 my $dt=DateTime->now('time_zone' => 'local');
 
@@ -278,7 +276,6 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		next;
 	}
 	
-	
 	if (!$issue->{'key_sync'})
 	{
 		print "   ! missing dst issue\n";
@@ -369,12 +366,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					'project'   => { 'key' => $vendor_sub_project },
 #					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
 					'issuetype' => { 'name' =>
-						($conversion{'customer2vendor'}{'issuetype'}{
+						($customer_conf{'issuetype-conversion'}{'customer2vendor'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 					},
 					'priority' => {'name'=>
-						($conversion{'customer2vendor'}{'priority'}{
+						($customer_conf{'priority'}{'customer2vendor'}{
 							$issue->{'fields'}->{'priority'}->{'name'}
 						} || $issue->{'fields'}->{'priority'}->{'name'})
 					},
@@ -415,24 +412,28 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				if $issue->{'fields'}->{'duedate'};
 			
 			# creating to vendor
-			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, {
+			print "   + post to servicedesk\n";
+			my $data={
 				'serviceDeskId' => ($config->{'vendor'}->{'servicedesk'} || 1),
 				'requestTypeId' => ($config->{'vendor'}->{'servicedesk_requesttypeid'} || 6),
 				'requestFieldValues' => {
 					'summary' => $issue->{'fields'}->{'summary'},
 					'description' => '*'.$issue->{'reporter'}.'*: '.$issue->{'fields'}->{'description'},
 				}
-			});
+			};
+#			print Dumper($data);
+			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, $data);
+			print "   + update jira issue\n";
 			$jira_dst->PUT('/issue/'.$issue_dst->{'issueKey'}, undef, {
 				"fields" => {
 					'customfield_'.$config->{'vendor'}->{'tempo_account_cf'} => "" . $customer_account,
 					'issuetype' => { 'name' =>
-						($conversion{'customer2vendor'}{'issuetype'}{
+						($customer_conf{'issuetype-conversion'}{'customer2vendor'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 					},
 					'priority' => {'name'=>
-						($conversion{'customer2vendor'}{'priority'}{
+						($customer_conf{'priority'}{'customer2vendor'}{
 							$issue->{'fields'}->{'priority'}->{'name'}
 						} || $issue->{'fields'}->{'priority'}->{'name'})
 					},
@@ -443,21 +444,21 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		}
 		else # source is vendor
 		{
-			$fields{'customfield_10005'}=$issue->{'fields'}->{'customfield_10106'}
-				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
+#			$fields{'customfield_10005'}=$issue->{'fields'}->{'customfield_10106'}
+#				if $issue->{'fields'}->{'issuetype'}->{'name'} eq "Epic";
 			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
 				if $issue->{'fields'}->{'duedate'};
 			
 			# check if reporter exists
-			my $response=$jira_dst->GET('/user/search?username='.$issue->{'reporter'}, undef, {});
-			if ($response && $response->[0])
-			{
+#			my $response=$jira_dst->GET('/user/search?username='.$issue->{'reporter'}, undef, {});
+#			if ($response && $response->[0])
+#			{
 #				$fields{'reporter'} = {'name' => $response->[0]->{'name'}};
-			}
-			else
-			{
+#			}
+#			else
+#			{
 #				$fields{'reporter'} = {'name' => $vendor_user};
-			}
+#			}
 			
 			# creating to customer
 #			$issue->{'reporter'}=$vendor_user if $issue->{'reporter'} eq $customer_user;
@@ -476,12 +477,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					'project'   => { 'key' => $customer_project },
 #					'reporter'  => { 'name' => ($issue->{'reporter'} || $vendor_user)},
 					'issuetype' => { 'name' =>
-						($conversion{'vendor2customer'}{'issuetype'}{
+						($customer_conf{'issuetype-conversion'}{'vendor2customer'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 					},
 					'priority' => {'name'=>
-						($conversion{'vendor2customer'}{'priority'}{
+						($customer_conf{'priority'}{'vendor2customer'}{
 							$issue->{'fields'}->{'priority'}->{'name'}
 						} || $issue->{'fields'}->{'priority'}->{'name'})
 					},
@@ -514,40 +515,6 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		);
 		
 		$source=$issue;
-		
-#		next;
-#		# add links
-#		$jira_vendor->POST('/issue/'.($sub_issue->{'key'}).'/remotelink', undef, {
-#			'object' => {
-#				'url' => $customer_url.'/browse/'.$sub_issue_customer->{'key'},
-#				'title' => 'Remote issue '.$sub_issue_customer->{'key'}
-#			},
-#		});
-#		$jira_customer->POST('/issue/'.($sub_issue_customer->{'key'}).'/remotelink', undef, {
-#			'object' => {
-#				'url' => $vendor_url.'/browse/'.$sub_issue->{'key'},
-#				'title' => 'Remote issue '.$sub_issue->{'key'}
-#			},
-#		});
-		
-=head1
-		# update tasks
-		my $sth = $dbh->prepare(qq{
-			UPDATE tasks SET
-				id_$name_opposite = ?,
-				updated_$name_opposite = ?,
-				data_$name_opposite = ?
-			WHERE
-				id_$name = ?
-			LIMIT 1
-		});
-		$sth->execute(
-			$issue_dst->{'key'},
-			$issue_dst->{'fields'}{'updated'},
-			to_json($issue_dst,{ ascii => 1, pretty => 1 }),
-			$issue->{'key'}
-		);
-=cut
 	}
 	
 	if (!$source->{'key'}) # no source (previous) data available
@@ -576,6 +543,14 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		$synced--;
 		next;
 	}
+	
+	$issue_dst->{'source'}='C';
+	$issue_dst->{'source'}='V' if $issue->{'source'} eq 'C';
+	
+	$issue_dst->{'sub'}=0;
+	$issue_dst->{'sub'}=1 if (
+		($issue_dst->{'source'} eq "V" && $issue->{'key'}=~/^$vendor_sub_key/)
+		|| ($issue_dst->{'fields'}->{'issuetype'}->{'name'} eq 'Sub-task'));
 	
 	if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
 	{
@@ -680,7 +655,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						'issuetype' => { 'name' => 'Sub-task'},
 						'summary' => $sub_issue->{'fields'}->{'summary'},
 						'priority' => {'name'=>
-							($conversion{'vendor2customer'}{'priority'}{
+							($customer_conf{'priority'}{'vendor2customer'}{
 								$issue->{'fields'}->{'priority'}->{'name'}
 							} || $issue->{'fields'}->{'priority'}->{'name'})
 						},
@@ -768,7 +743,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						'reporter'  => { 'name' => $customer_user},
 						'assignee'  => { 'name' => $customer_user},
 						'issuetype' => { 'name' =>
-							($conversion{'customer2vendor'}{'issuetype'}{
+							($customer_conf{'issuetype-conversion'}{'customer2vendor'}{
 								$issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 						},
@@ -1090,12 +1065,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	# issuetype
 	my $fromto=$name.'2'.$name_opposite;
 	if (($source->{'fields'}->{'issuetype'}->{'name'} ne $issue->{'fields'}->{'issuetype'}->{'name'})
-		&& ($conversion{$fromto}->{'issuetype'}->{$issue->{'fields'}->{'issuetype'}->{'name'}} ne $issue_dst->{'fields'}->{'issuetype'}->{'name'})
+		&& ($customer_conf{'issuetype-conversion'}->{$fromto}->{$issue->{'fields'}->{'issuetype'}->{'name'}} ne $issue_dst->{'fields'}->{'issuetype'}->{'name'})
 		&& !$issue->{'sub'}
 	)
 	{
 		print "   'issuetype' changed '".$source->{'fields'}->{'issuetype'}->{'name'}."'->'".$issue->{'fields'}->{'issuetype'}->{'name'}."'\n";
-		$fields{'issuetype'}->{'name'} = $conversion{$fromto}->{'issuetype'}->{$issue->{'fields'}->{'issuetype'}->{'name'}};
+		$fields{'issuetype'}->{'name'} = $customer_conf{'issuetype-conversion'}->{$fromto}->{$issue->{'fields'}->{'issuetype'}->{'name'}};
 		print "   'issuetype' to '".$fields{'issuetype'}->{'name'}."'\n";
 	}
 	
@@ -1122,92 +1097,72 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	%fields=();
 	
 #=head1
-
+	
 	# status
 	if ($source->{'fields'}->{'status'}->{'name'} ne $issue->{'fields'}->{'status'}->{'name'})
 	{
-		my $prefix;
-			$prefix='sub-' if $issue->{'sub'};
-			if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task')
-			{
-				# this is not a real sub-task with sub-task workflow
-#				undef $prefix;
-			}
-			
+		#'task2subtask'
+		my $issuetype=($issue->{'sub'} ? 'subtask' : 'task');
+		my $towhat='2'.($issue_dst->{'sub'} ? 'subtask' : 'task');
+		
 		my $fromto=$name.'2'.$name_opposite;
 		my $path=$source->{'fields'}->{'status'}->{'name'}.'->'.$issue->{'fields'}->{'status'}->{'name'};
-		print "   'status' changed '".$source->{'fields'}->{'status'}->{'name'}."'->'".$issue->{'fields'}->{'status'}->{'name'}."'\n";
+		my $path_alt='*->'.$issue->{'fields'}->{'status'}->{'name'};
+		print "   ! ".$issuetype.$towhat." 'status' changed '".$source->{'fields'}->{'status'}->{'name'}."'->'".$issue->{'fields'}->{'status'}->{'name'}."'\n";
 		my $opposite_status=$issue_dst->{'fields'}->{'status'}->{'name'};
 		print "    : ".$name_opposite." issue in status '".$opposite_status."'\n";
 		
-		my $conversion_=$conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{$opposite_status}
-			|| $conversion{$fromto}->{$prefix.'statuspath'}->{$path}->{'*'};
-#		$conversion_->{'path'}=[] unless $conversion_->{'path'};
-#		push @{$conversion_->{'path'}},$conversion_->{'status'} if $conversion_->{'status'};
-#		delete $conversion_->{'status'};
+		my $dst_status =
+				$customer_conf{'issuetype'}->{$issuetype}->{'transition'}->{$fromto}->{$towhat}->{$path}
+			|| $customer_conf{'issuetype'}->{$issuetype}->{'transition'}->{$fromto}->{$towhat}->{$path_alt};
 		
-#		print Dumper($conversion_);
+		if (!$dst_status)
+		{
+			print "    : unknown transition $issuetype - $fromto - $towhat - ".$path."\n";
+			die "unknown path";
+		}
 		
-		if ($conversion_->{'ok'})
+		if ($opposite_status eq $dst_status)
 		{
 			print "    . already in 'ok' state\n";
 		}
-		elsif ($conversion_->{'path'} && $conversion_->{'path'}[0])
+		else
 		{
+			print "    : transition to status '".$dst_status."'\n";
 			
-			print "    : known path='".join(",",@{$conversion_->{'path'}})."'\n";
-			
+			# check currently available transitions
 			my $issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
-			foreach my $status (@{$conversion_->{'path'}})
+			my $transition;
+			foreach my $trans (@{$issue_dst->{'transitions'}})
 			{
-				$conversion_->{'status'}=$status;
-				my $resolution=0;
-					$resolution=$conversion{$fromto}->{'resolution-status'}->{$status}
-						unless $issue->{'sub'};
-				print "    = status '".$status."' resolution=$resolution\n";
-				
-#				exit;
-				
-				my $transition;
-				foreach my $trans (@{$issue_dst->{'transitions'}})
+				if ($trans->{'to'}->{'name'} eq $dst_status)
 				{
-					if ($trans->{'to'}->{'name'} eq $conversion_->{'status'})
-					{
-						$transition=$trans;
-						last;
-					}
+					$transition=$trans;
+					last;
 				}
-				
-				if (!$transition)
-				{
-					print "    ! can't find available transition\n";
-					if (!@{$issue_dst->{'transitions'}})
-					{
-						next;
-					}
-					else
-					{
-						print Dumper($issue_dst->{'transitions'});
-						die "can't find available transition";
-					}
-				}
-				
+			}
+			
+			if (!$transition)
+			{
+				print "    ! can't find available transition\n";
+				die "can't find available transition";
+			}
+			else
+			{
+#				print Dumper($transition);
 				print "    : found transition '$transition->{'name'}'\n";
 				
 				my %fields;
-				if ($resolution)
+				if ($transition->{'to'}->{'statusCategory'}->{'name'}=~/Done/i)
 				{
 					$fields{'fields'}{'resolution'}{'name'} = 
-						$conversion{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
+						$customer_conf{'resolution'}->{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
 						|| $issue->{'fields'}->{'resolution'}->{'name'};
-						
+					
 					# asking for feedback
-					
-					
 #					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
 #						'body' => $body
 #					});
-					
 				}
 				
 				my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
@@ -1215,26 +1170,11 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					%fields
 				});
 				
-				print Dumper($response);
-				
 				$issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
 			}
-			
+		
 		}
-		elsif ($issue->{'source'} eq "C" && ($issue->{'fields'}->{'assignee'}->{'name'} ne $vendor))
-		{
-			print "    ! this is not assigned to mee, ignoring uknown path '$path'\n";
-		}
-		else
-		{
-			print "    ! unknown path '$path'\n";
-			
-			print Dumper($issue_dst->{'transitions'});
-			
-			die "unknown path '$path'";
-		}
-#		$fields{'issuetype'}->{'name'} = $issue->{'fields'}->{'issuetype'}->{'name'};
-#		print "   'issuetype' to '".$fields{'issuetype'}->{'name'}."'\n";
+		
 	}
 	
 	
@@ -1247,7 +1187,6 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #		print "   'resolution' to '".$fields{'resolution'}->{'name'}."'\n";
 #		exit;
 #	}
-	
 	
 	# update all changes
 #	print "update $issue->{'key'} to '$issue->{'fields'}->{'updated'}'\n";
