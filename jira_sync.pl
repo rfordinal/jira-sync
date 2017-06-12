@@ -1104,7 +1104,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	{
 		#'task2subtask'
 		my $issuetype=($issue->{'sub'} ? 'subtask' : 'task');
-		my $towhat='2'.($issue_dst->{'sub'} ? 'subtask' : 'task');
+		my $issuetype_dst=($issue_dst->{'sub'} ? 'subtask' : 'task');
+		my $towhat='2'.$issuetype_dst;
 		
 		my $fromto=$name.'2'.$name_opposite;
 		my $path=$source->{'fields'}->{'status'}->{'name'}.'->'.$issue->{'fields'}->{'status'}->{'name'};
@@ -1160,8 +1161,78 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			
 			if (!$transition)
 			{
-				print "    ! can't find available transition\n";
-				die "can't find available transition";
+				print "    ! can't find available direct transition from status '".$opposite_status."' to status '".$dst_status."'\n";
+				
+				my @path;
+				my @paths;
+				my $level=0;
+				my $workflow;
+				if ($name_opposite eq "customer")
+				{
+					$workflow =
+						$customer_conf{'issuetype'}->{$issuetype_dst}->{'workflow'}->{$issue_dst->{'fields'}->{'issuetype'}->{'name'}}
+						|| $customer_conf{'issuetype'}->{$issuetype_dst}->{'workflow'}->{'*'};
+				}
+				else
+				{
+					$workflow =
+						$vendor_conf{'issuetype'}->{$issuetype_dst}->{'workflow'}->{$issue_dst->{'fields'}->{'issuetype'}->{'name'}}
+						|| $vendor_conf{'issuetype'}->{$issuetype_dst}->{'workflow'}->{'*'};
+				}
+				
+#				print "\n";
+				search_path(\@path,\@paths,$opposite_status,$dst_status,$workflow,$level);
+				@path = @{(sort {scalar $a <=> scalar $b} @paths)[0]};
+				
+				if (scalar @path)
+				{
+					print "    : found transitions '".join("','",@path)."'\n";
+					
+					die "required assistence\n" unless $ARGV[0] eq "force";
+					
+#					exit;
+					foreach my $dst_status (@path)
+					{
+						# check currently available transitions
+						my $issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
+#						print Dumper($issue_dst->{'transitions'});
+						my $transition;
+						foreach my $trans (@{$issue_dst->{'transitions'}})
+						{
+							if ($trans->{'to'}->{'name'} eq $dst_status)
+							{
+								$transition=$trans;
+								last;
+							}
+						}
+						
+						my %fields;
+						if ($transition->{'to'}->{'statusCategory'}->{'name'}=~/Done/i)
+						{
+							$fields{'fields'}{'resolution'}{'name'} = 
+								$customer_conf{'resolution'}->{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
+								|| $issue->{'fields'}->{'resolution'}->{'name'};
+							
+							# asking for feedback
+		#					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
+		#						'body' => $body
+		#					});
+						}
+						
+						my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
+							'transition' => $transition->{'id'},
+							%fields
+						});
+						
+						$issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
+					}
+					
+				}
+				else
+				{
+					die "can't find available transition path";
+				}
+				
 			}
 			else
 			{
@@ -1172,8 +1243,10 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				if ($transition->{'to'}->{'statusCategory'}->{'name'}=~/Done/i)
 				{
 					$fields{'fields'}{'resolution'}{'name'} = 
-						$customer_conf{'resolution'}->{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
+						$customer_conf{'resolution'}->{$fromto}->{$issue->{'fields'}->{'resolution'}->{'name'}}
 						|| $issue->{'fields'}->{'resolution'}->{'name'};
+					
+					print "    = set resolution '".$fields{'fields'}{'resolution'}{'name'}."'\n";
 					
 					# asking for feedback
 #					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
@@ -1263,6 +1336,47 @@ sub comment_text_replace
 	
 	$text=~s|^ ||;$text=~s| $||;
 	return $text;
+}
+
+
+sub search_path
+{
+	my $path=shift;
+	my $paths=shift;
+	my $status_src=shift;
+	my $status_dst=shift;
+	my $workflow=shift;
+	my $level=shift;
+	
+	push @{$path}, $status_src;
+	
+	return undef if $level >= 10;
+	
+	foreach my $status (@{$workflow->{$status_src}})
+	{
+		for ($level+1..scalar @{$path}-1) {delete $path->[$_]}
+		
+		print "".(" " x $level)."->'".$status."'\n";
+		
+		if ($status eq $status_dst)
+		{
+			push @{$path},$status;
+			print "".(" " x $level)."  !found, '".join("','",@{$path})."' return\n";
+			push $paths,[];
+			push $paths->[-1], @{$path};
+			return @{$path};
+		}
+		
+		my $found;
+		foreach (@{$path})
+		{
+			$found=1 if $_ eq $status;
+		}
+		next if $found;
+		
+		search_path($path,$paths,$status,$status_dst,$workflow,$level+1);
+	}
+	
 }
 
 
