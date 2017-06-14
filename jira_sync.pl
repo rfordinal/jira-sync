@@ -169,6 +169,7 @@ if ($search_vendor_do)
 				project in ($vendor_sub_project)
 			)
 		)
+		AND issuetype != "Epic"
 	}.$query_vendor;
 	my $search = eval {$jira_vendor->POST('/search', undef, {
 		'jql'	=> $jql,
@@ -1191,12 +1192,13 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #				print "\n";
 				search_path(\@path,\@paths,$opposite_status,$dst_status,$workflow,$level);
 				@path = @{(sort {scalar $a <=> scalar $b} @paths)[0]};
+				shift @path;
 				
 				if (scalar @path)
 				{
 					print "    : found transitions '".join("','",@path)."'\n";
 					
-					die "required assistence\n" unless $ARGV[0] eq "force";
+#					die "required assistence\n" unless $ARGV[0] eq "force";
 					
 #					exit;
 					foreach my $dst_status (@path)
