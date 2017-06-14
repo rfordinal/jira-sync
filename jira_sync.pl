@@ -959,9 +959,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	if (!$issue->{'sub'} || $issue->{'source'} eq "C" || $issue->{'labels'}=~/sync/ ||
 		($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task'))
 	{
-		if ($issue_dst->{'fields'}->{'status'}->{'name'} ne "Closed")
+		if (not($issue->{'fields'}->{'status'}->{'name'} ~~ @{$customer_conf{'ignore-comments'}}))
 		{
-#			print "check comments\n";
+			print "   . check comments\n";
 			# comments
 			# TODO: check changes in comments
 			foreach my $comment (@{$jira_src->GET('/issue/'.$issue->{'key'}.'/comment', undef)->{'comments'}})

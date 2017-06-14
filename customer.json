@@ -1,4 +1,5 @@
 {
+	"ignore-comments" : ["Done","Closed","Canceled"],
 	"issuetype-conversion" : {
 		"customer2vendor" : {
 			"Task" : "Change",
