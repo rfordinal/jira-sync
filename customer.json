@@ -104,15 +104,18 @@
 					},
 					"2subtask" : {
 						"*->Resolved" : "Done",
+						"*->Open" : ["To Do"],
 						"*->Reopened" : "In Progress",
-						"*->In Progress" : ["In Progress"]
+						"*->In Progress" : ["In Progress"],
+						"*->Waiting for customer": ["To Do"]
 					}
 				},
 				"customer2vendor" : {
 					"2subtask" : {
 						"*->Done" : ["Resolved"],
 						"Done->In Progress" : ["In Progress","Reopened"],
-						"To Do->In Progress" : ["In Progress"]
+						"To Do->In Progress" : ["In Progress"],
+						"In Progress->To Do" : ["Waiting for customer","Open"]
 					}
 				}
 			}
