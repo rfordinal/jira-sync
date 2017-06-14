@@ -316,9 +316,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		}
 		if ($issue->{'source'} eq "C" && $issue->{'sub'})
 		{
-			print "   . this is only sub-issue from customer, ignoring\n";
-			$synced--;
-			next;
+#			print "   . this is only sub-issue from customer, ignoring?\n";
+#			$synced--;
+#			next;
 		}
 		if ($issue->{'fields'}->{'status'}->{'name'}=~/(Closed|Cancelled|Resolved)/)
 		{
@@ -584,6 +584,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		print "   ? original-estimated=". $est ." $name_opposite=".$est_dst."\n";
 		if ($est ne $est_dst && $issue_dst->{'fields'}->{'status'}->{'name'} ne "Closed")
 		{
+			print "   = update est to ".$est."\n";
 #			$fields{'timetracking'}{'originalEstimate'} = $est;
 			$jira_dst->PUT('/issue/'.$issue->{'key_sync'}, undef, {
 				"fields" => {
@@ -1042,8 +1043,15 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	if ($issue->{'fields'}->{'description'} ne $issue_dst->{'fields'}->{'description'})
 	{
-		$fields{'description'} = $issue->{'fields'}->{'description'};
-		print "   'description' to '".$fields{'description'}."'\n";
+		if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'assignee'}->{'name'} ne $vendor_user)
+		{
+			print "   . don't send changed 'description', this issue is assigned to '".$issue_dst->{'fields'}->{'assignee'}->{'name'}."'\n";
+		}
+		else
+		{
+			$fields{'description'} = $issue->{'fields'}->{'description'};
+			print "   'description' to '".$fields{'description'}."'\n";
+		}
 	}
 	
 	# priority
