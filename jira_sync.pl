@@ -1130,6 +1130,16 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		if (!$dst_status)
 		{
 			print "    : unknown transition $issuetype - $fromto - $towhat - ".$path."\n";
+			print "    ? possible transitions: ";
+			
+			# check currently available transitions
+			my $issue_dst=$jira_dst->GET('/issue/'.$issue->{'key_sync'}.'?expand=worklog,transitions', undef);
+			foreach my $trans (@{$issue_dst->{'transitions'}})
+			{
+				print $trans->{'to'}->{'name'}.", ";
+			}
+			print "\n";
+			
 			die "unknown path";
 		}
 		
