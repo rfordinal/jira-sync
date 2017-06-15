@@ -74,7 +74,10 @@
 					},
 					"2subtask" : {
 						"Draft->In Progress" : ["In Progress","Open"],
-						"Draft->Under Review" : ["Resolved"]
+						"Draft->Under Review" : ["Resolved"],
+						"*->Under Review" : ["Resolved"],
+						"*->Waiting for reporter" : ["Waiting for customer"],
+						"*->Done" : ["Resolved","Closed"]
 					}
 				},
 				"vendor2customer" : {
@@ -101,7 +104,7 @@
 				"vendor2customer" : {
 					"2task" : {
 						"Open->Waiting for customer": ["Waiting for reporter"],
-						"*->Resolved" : ["Under Review"]
+						"*->Resolved" : ["Under Review","Done"]
 					},
 					"2subtask" : {
 						"*->Resolved" : "Done",
