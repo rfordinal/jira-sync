@@ -595,7 +595,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			});
 		}
 	}
-	elsif ($issue->{'sub'} && $issue->{'source'} eq "V")
+	elsif ($issue->{'sub'} && $issue->{'source'} eq "V"
+		&& $issue_dst->{'fields'}->{'assignee'} eq $vendor_user)
 	{
 		my $est=$issue->{'fields'}->{'aggregatetimeoriginalestimate'};
 		my $est_dst=$issue_dst->{'fields'}->{'timetracking'}->{'originalEstimateSeconds'};
@@ -1112,7 +1113,13 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #=head1
 	
 	# status
-	if ($source->{'fields'}->{'status'}->{'name'} ne $issue->{'fields'}->{'status'}->{'name'})
+	if ($source->{'fields'}->{'status'}->{'name'} ne $issue->{'fields'}->{'status'}->{'name'}
+		&& (
+			$issue->{'source'} eq "C" ||
+			# don't make transition to issue that is not assigned to you
+			($issue->{'source'} eq "V" && $issue_dst->{'fields'}->{'assignee'} eq $vendor_user)
+		)
+	)
 	{
 		#'task2subtask'
 		my $issuetype=($issue->{'sub'} ? 'subtask' : 'task');
