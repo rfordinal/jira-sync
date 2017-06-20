@@ -335,7 +335,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #		print Dumper($issue);
 		if ($issue->{'source'} eq "C" && $issue->{'sub'})
 		{
-			my $est=$issue->{'fields'}->{'timetracking'}->{'originalEstimate'};
+			my $est=$issue->{'fields'}->{'timetracking'}->{'originalEstimate'} || '5m';
 			
 			$fields{'duedate'}=$issue->{'fields'}->{'duedate'}
 				if $issue->{'fields'}->{'duedate'};
@@ -1043,7 +1043,10 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	
 	if ($issue->{'fields'}->{'description'} ne $issue_dst->{'fields'}->{'description'})
 	{
-		if ($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'assignee'}->{'name'} ne $vendor_user)
+		if ($issue->{'source'} eq "V" && $issue->{'sub'} && (
+			$issue_dst->{'fields'}->{'assignee'}->{'name'} ne $vendor_user
+			&& $issue_dst->{'fields'}->{'reporter'}->{'name'} ne $vendor_user
+		))
 		{
 			print "   . don't send changed 'description', this issue is assigned to '".$issue_dst->{'fields'}->{'assignee'}->{'name'}."'\n";
 		}
@@ -1201,6 +1204,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				
 #				print "\n";
 				search_path(\@path,\@paths,$opposite_status,$dst_status,$workflow,$level);
+				print Dumper(\@paths);
 				@path = @{(sort {scalar $a <=> scalar $b} @paths)[0]};
 				shift @path;
 				
