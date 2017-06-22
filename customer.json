@@ -70,11 +70,13 @@
 						"Resolved->Rejected" : "Waiting for support",
 						"*->Rejected" : "Waiting for support",
 						"*->Waiting for reporter" : "Waiting for customer",
-						"Waiting for support->Waiting for reporter" : "Waiting for customer"
+						"Waiting for support->Waiting for reporter" : "Waiting for customer",
+						"Done->Closed" : ["Resolved","Closed"]
 					},
 					"2subtask" : {
 						"Draft->In Progress" : ["In Progress","Open"],
 						"Draft->Under Review" : ["Resolved"],
+						"*->Open" : ["Open"],
 						"*->Under Review" : ["Resolved"],
 						"*->Waiting for reporter" : ["Waiting for customer"],
 						"*->Done" : ["Resolved","Closed"]
@@ -82,7 +84,7 @@
 				},
 				"vendor2customer" : {
 					"2task" : {
-						"*->In Progress" : "In Progress",
+						"*->In Progress" : ["In Progress","Done"],
 						"*->Resolved" : ["Under Review","Done"],
 						"*->Closed" : ["Closed","Cancelled"],
 						"Waiting for customer->Waiting for support" : "In Progress",
@@ -108,6 +110,7 @@
 					},
 					"2subtask" : {
 						"*->Resolved" : "Done",
+						"*->Closed" : "Done",
 						"*->Open" : ["To Do"],
 						"*->Reopened" : "In Progress",
 						"*->In Progress" : ["In Progress"],
