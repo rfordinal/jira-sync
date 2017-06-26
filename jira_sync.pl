@@ -650,10 +650,12 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				$fields{'duedate'}=$sub_issue->{'fields'}->{'duedate'}
 					if $sub_issue->{'fields'}->{'duedate'};
 				
+				my $project=$issue->{'key_sync'};
+					$project=~s|\-.*$||;
 				my $sub_issue_customer=$jira_customer->POST('/issue', undef, {
 					'fields' => {
 						'parent' => {'key' => $issue->{'key_sync'}},
-						'project'   => { 'key' => $customer_project },
+						'project'   => { 'key' => $project },
 #						'reporter'  => { 'name' => $vendor_user},
 						'assignee'  => { 'name' => $vendor_user},
 						'issuetype' => { 'name' => 'Sub-task'},
@@ -1275,7 +1277,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				{
 					$fields{'fields'}{'resolution'}{'name'} = 
 						$customer_conf{'resolution'}->{$fromto}->{$issue->{'fields'}->{'resolution'}->{'name'}}
-						|| $issue->{'fields'}->{'resolution'}->{'name'};
+						|| 'Done';
 					
 					print "    = set resolution '".$fields{'fields'}{'resolution'}{'name'}."'\n";
 					
