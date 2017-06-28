@@ -71,7 +71,8 @@
 						"*->Rejected" : "Waiting for support",
 						"*->Waiting for reporter" : "Waiting for customer",
 						"Waiting for support->Waiting for reporter" : "Waiting for customer",
-						"Done->Closed" : ["Resolved","Closed"]
+						"Done->Closed" : ["Resolved","Closed"],
+						"*->Cancelled" : ["Resolved","Closed"]
 					},
 					"2subtask" : {
 						"Draft->In Progress" : ["In Progress","Open"],
