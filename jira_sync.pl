@@ -963,6 +963,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 	if (!$issue->{'sub'} || $issue->{'source'} eq "C" || $issue->{'labels'}=~/sync/ ||
 		($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task'))
 	{
+		print "   ? check comments\n";
 		if (not($issue->{'fields'}->{'status'}->{'name'} ~~ @{$customer_conf{'ignore-comments'}}))
 		{
 			print "   . check comments\n";
@@ -1119,7 +1120,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		&& (
 			$issue->{'source'} eq "C" ||
 			# don't make transition to issue that is not assigned to you
-			($issue->{'source'} eq "V" && $issue_dst->{'fields'}->{'assignee'} eq $vendor_user)
+			($issue->{'source'} eq "V" && $issue_dst->{'fields'}->{'assignee'}->{'name'} eq $vendor_user)
 		)
 	)
 	{
