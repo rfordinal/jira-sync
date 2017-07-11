@@ -2,6 +2,7 @@
 	"ignore-comments" : ["Done","Closed","Canceled"],
 	"issuetype-conversion" : {
 		"customer2vendor" : {
+			"Fault" : "Fault",
 			"Task" : "Change",
 			"Bug" : "Fault"
 		},
@@ -71,16 +72,18 @@
 						"*->Rejected" : "Waiting for support",
 						"*->Waiting for reporter" : "Waiting for customer",
 						"Waiting for support->Waiting for reporter" : "Waiting for customer",
-						"Done->Closed" : ["Resolved","Closed"],
+						"*->Closed" : ["Resolved","Closed"],
 						"*->Cancelled" : ["Resolved","Closed"]
 					},
 					"2subtask" : {
 						"Draft->In Progress" : ["In Progress","Open"],
 						"Draft->Under Review" : ["Resolved"],
+						"*->In Progress" : ["In Progress"],
 						"*->Open" : ["Open"],
 						"*->Under Review" : ["Resolved"],
 						"*->Waiting for reporter" : ["Waiting for customer"],
-						"*->Done" : ["Resolved","Closed"]
+						"*->Done" : ["Resolved","Closed"],
+						"*->Closed" : ["Resolved","Closed"]
 					}
 				},
 				"vendor2customer" : {
@@ -90,7 +93,7 @@
 						"*->Closed" : ["Closed","Cancelled"],
 						"Waiting for customer->Waiting for support" : "In Progress",
 						"*->Waiting for customer" : "Waiting for reporter",
-						"Resolved->Waiting for support" : "Rejected"
+						"Resolved->Waiting for support" : ["Rejected","Done"]
 					}
 				}
 			}
@@ -107,7 +110,9 @@
 				"vendor2customer" : {
 					"2task" : {
 						"Open->Waiting for customer": ["Waiting for reporter"],
-						"*->Resolved" : ["Under Review","Done"]
+						"*->In Progress" : ["In Progress","Done"],
+						"*->Resolved" : ["Under Review","Done"],
+						"*->Closed" : ["Done"]
 					},
 					"2subtask" : {
 						"*->Resolved" : "Done",
