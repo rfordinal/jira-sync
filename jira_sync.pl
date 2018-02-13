@@ -9,6 +9,7 @@ use DateTime;
 use Data::Dumper;
 use DBI;
 use JSON;
+use experimental 'smartmatch';
 
 our %arg;
 
@@ -151,7 +152,11 @@ if ($search_customer_do)
 		'maxResults' => 1000,
 		'fields' => ['summary','key','updated','issuetype','status']
 	})};
-	exit if $@;
+	if ($@)
+	{
+		print $@;
+		exit;
+	}
 	push @issues, @{$search->{'issues'}};
 }
 if ($search_vendor_do)
@@ -272,9 +277,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		&& $issue->{'source'} eq "V"
 	)
 	{
-		print "   . this is already closed issue, skip update\n";
-		$synced--;
-		next;
+#		print "   . this is already closed issue, skip update\n";
+#		$synced--;
+#		next;
 	}
 	
 	if (!$issue->{'key_sync'})
@@ -424,7 +429,6 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			};
 #			print Dumper($data);
 			$issue_dst=$jira_vendor_servicedesk->POST('/request', undef, $data);
-			print "   + update jira issue\n";
 			$jira_dst->PUT('/issue/'.$issue_dst->{'issueKey'}, undef, {
 				"fields" => {
 					'customfield_'.$config->{'vendor'}->{'tempo_account_cf'} => "" . $customer_account,
@@ -652,7 +656,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				
 				my $project=$issue->{'key_sync'};
 					$project=~s|\-.*$||;
-				my $sub_issue_customer=$jira_customer->POST('/issue', undef, {
+				my $sub_issue_customer=eval{$jira_customer->POST('/issue', undef, {
 					'fields' => {
 						'parent' => {'key' => $issue->{'key_sync'}},
 						'project'   => { 'key' => $project },
@@ -673,7 +677,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						},
 						%fields
 					},
-				});
+				})};
+				die $@ if $@;
 				$sub_issue->{'key_sync'} = $sub_issue_customer->{'key'};
 				$sub_issue_customer=$jira_customer->GET('/issue/'.$sub_issue->{'key_sync'}, undef);
 				
@@ -951,6 +956,10 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 					my $sth = $dbh->prepare("REPLACE INTO attachments (issue_$name,issue_$name_opposite,filename) VALUES (?,?,?)");
 						$sth->execute($issue->{'key'},$issue->{'key_sync'},$attachment->{'filename'});
 				};
+				if ($@)
+				{
+					print "   ! ".$@."\n";
+				}
 				
 				unlink $attachment->{'filename'};
 				
@@ -964,7 +973,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		($issue->{'source'} eq "V" && $issue->{'sub'} && $issue_dst->{'fields'}->{'issuetype'}->{'name'} ne 'Sub-task'))
 	{
 		print "   ? check comments\n";
-		if (not($issue->{'fields'}->{'status'}->{'name'} ~~ @{$customer_conf{'ignore-comments'}}))
+		if (not($issue->{'fields'}->{'status'}->{'name'} ~~ @{$customer_conf{'ignore-comments'}})
+		 || $issue->{'source'} eq "V")
 		{
 			print "   . check comments\n";
 			# comments
@@ -1244,13 +1254,21 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						if ($transition->{'to'}->{'statusCategory'}->{'name'}=~/Done/i)
 						{
 							$fields{'fields'}{'resolution'}{'name'} = 
-								$customer_conf{'resolution'}->{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
+								$customer_conf{'resolution'}->{$fromto}->{$issue->{'fields'}->{'resolution'}->{'name'}}
 								|| $issue->{'fields'}->{'resolution'}->{'name'};
+							
+							print "from $fromto ".$issue->{'fields'}->{'resolution'}->{'name'}." to ".$fields{'fields'}{'resolution'}{'name'}."\n";
 							
 							# asking for feedback
 		#					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
 		#						'body' => $body
 		#					});
+						}
+						
+						if (!$transition->{'id'})
+						{
+							print "    ! transition is not possible\n";
+							next;
 						}
 						
 						my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
