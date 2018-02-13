@@ -755,7 +755,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						'assignee'  => { 'name' => $customer_user},
 						'issuetype' => { 'name' =>
 							($customer_conf{'issuetype-conversion'}{'customer2vendor'}{
-								$issue->{'fields'}->{'issuetype'}->{'name'}
+								$sub_issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 						},
 						'summary' => $sub_issue->{'fields'}->{'summary'},
@@ -1143,6 +1143,18 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		my $path=$source->{'fields'}->{'status'}->{'name'}.'->'.$issue->{'fields'}->{'status'}->{'name'};
 		my $path_alt='*->'.$issue->{'fields'}->{'status'}->{'name'};
 		print "   ! ".$issuetype.$towhat." 'status' changed '".$source->{'fields'}->{'status'}->{'name'}."'->'".$issue->{'fields'}->{'status'}->{'name'}."'\n";
+		
+		if (!$issue->{'sub'} && $issue->{'source'} eq "V" && $issue->{'fields'}->{'status'}->{'name'} eq 'Resolved')
+		{
+			print "   ? is servicedesk set up correctly?\n";
+			$issue->{'feedback.token.key'} = $jira_vendor->GET('/issue/'.$issue->{'key'}.'/properties/feedback.token.key')->{'value'}->{'token'};
+			if (!$issue->{'feedback.token.key'})
+			{
+				print "   ! missing feedback.token.key\n";
+				die "missing feedback.token.key for issue ".$issue->{'key'};
+			}
+		}
+		
 		my $opposite_status=$issue_dst->{'fields'}->{'status'}->{'name'};
 		print "    : ".$name_opposite." issue in status '".$opposite_status."'\n";
 		
@@ -1184,6 +1196,33 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		if ($opposite_status eq $dst_status)
 		{
 			print "    . already in 'ok' state\n";
+			
+			if ($issue->{'source'} eq "C" && !$issue->{'sub'} && $issue->{'fields'}->{'status'}->{'name'} eq "Done")
+			{
+				# customer approved issue
+				print "    . customer approved issue, asking for feedback\n";
+				
+				$issue_dst->{'feedback.token.key'} = $jira_vendor->GET('/issue/'.$issue_dst->{'key'}.'/properties/feedback.token.key')->{'value'}->{'token'};
+				if (!$issue_dst->{'feedback.token.key'})
+				{
+					print "   ! missing feedback.token.key\n";
+					die "missing feedback.token.key for issue ".$issue_dst->{'key'};
+				}
+				my $url=$vendor_url."/servicedesk/customer/portal/".$config->{'vendor'}->{'servicedesk'}."/".$issue_dst->{'key'}."/feedback?token=" . $issue_dst->{'feedback.token.key'};
+				my $body=qq{*Tento task bol práve uzatvorený a akékoľvek zmeny v ňom už nebudú s $vendor JIRA synchronizované*
+----
+Ohodnoťte prosím našu prácu po kliknutí na tento odkaz
+
+[!http://services.comsultia.com/rate.png|width=63,height=63!|$url]
+
+*Ďakujeme*};
+				$jira_src->POST('/issue/'.($issue->{'key'}).'/comment', undef, {
+					'body' => $body
+				});
+			}
+			
+#			print "continue?";
+#			my $ask=<STDIN>;
 		}
 		else
 		{
@@ -1205,6 +1244,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			{
 				print "    ! can't find available direct transition from status '".$opposite_status."' to status '".$dst_status."'\n";
 				
+#				print "transitions?";
+#				my $ask=<STDIN>;
+				
 				my @path;
 				my @paths;
 				my $level=0;
@@ -1224,7 +1266,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				
 #				print "\n";
 				search_path(\@path,\@paths,$opposite_status,$dst_status,$workflow,$level);
-				print Dumper(\@paths);
+#					next unless scalar @paths;
 				@path = @{(sort {scalar $a <=> scalar $b} @paths)[0]};
 				shift @path;
 				
@@ -1256,21 +1298,15 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 							$fields{'fields'}{'resolution'}{'name'} = 
 								$customer_conf{'resolution'}->{$fromto}->{$issue->{'fields'}->{'resolution'}->{'name'}}
 								|| $issue->{'fields'}->{'resolution'}->{'name'};
-							
-							print "from $fromto ".$issue->{'fields'}->{'resolution'}->{'name'}." to ".$fields{'fields'}{'resolution'}{'name'}."\n";
-							
-							# asking for feedback
-		#					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
-		#						'body' => $body
-		#					});
 						}
 						
 						if (!$transition->{'id'})
 						{
-							print "    ! transition is not possible\n";
-							next;
+							die "    ! can't execute this transition\n";
+#							next;
 						}
 						
+#						print Dumper($transition->{'to'},\%fields);
 						my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
 							'transition' => $transition->{'id'},
 							%fields
@@ -1289,6 +1325,9 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 			else
 			{
 #				print Dumper($transition);
+#				print "transition?";
+#				my $ask=<STDIN>;
+				
 				print "    : found transition '$transition->{'name'}'\n";
 				
 				my %fields;
@@ -1299,11 +1338,6 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						|| 'Done';
 					
 					print "    = set resolution '".$fields{'fields'}{'resolution'}{'name'}."'\n";
-					
-					# asking for feedback
-#					my $out = $jira_dst->POST('/issue/'.($issue->{'key_sync'}).'/comment', undef, {
-#						'body' => $body
-#					});
 				}
 				
 				my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
@@ -1329,6 +1363,8 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 #		exit;
 #	}
 	
+#	print "save?";
+#	my $input=<STDIN>;
 	# update all changes
 #	print "update $issue->{'key'} to '$issue->{'fields'}->{'updated'}'\n";
 	my $sth = $dbh->prepare("UPDATE tasks SET data_$name=?, updated_$name=? WHERE id_$name=? LIMIT 1");
