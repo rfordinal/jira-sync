@@ -750,7 +750,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						'assignee'  => { 'name' => $customer_user},
 						'issuetype' => { 'name' =>
 							($customer_conf{'issuetype-conversion'}{'customer2vendor'}{
-								$issue->{'fields'}->{'issuetype'}->{'name'}
+								$sub_issue->{'fields'}->{'issuetype'}->{'name'}
 							} || 'Task')
 						},
 						'summary' => $sub_issue->{'fields'}->{'summary'},
@@ -1214,7 +1214,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 				
 #				print "\n";
 				search_path(\@path,\@paths,$opposite_status,$dst_status,$workflow,$level);
-				print Dumper(\@paths);
+#					next unless scalar @paths;
 				@path = @{(sort {scalar $a <=> scalar $b} @paths)[0]};
 				shift @path;
 				
@@ -1244,7 +1244,7 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 						if ($transition->{'to'}->{'statusCategory'}->{'name'}=~/Done/i)
 						{
 							$fields{'fields'}{'resolution'}{'name'} = 
-								$customer_conf{'resolution'}->{$fromto}->{'resolution'}->{$issue->{'fields'}->{'resolution'}->{'name'}}
+								$customer_conf{'resolution'}->{$fromto}->{$issue->{'fields'}->{'resolution'}->{'name'}}
 								|| $issue->{'fields'}->{'resolution'}->{'name'};
 							
 							# asking for feedback
@@ -1253,6 +1253,13 @@ foreach my $issue (sort {$a->{'fields'}->{'updated'} cmp $b->{'fields'}->{'updat
 		#					});
 						}
 						
+						if (!$transition->{'id'})
+						{
+							die "    ! can't execute this transition\n";
+#							next;
+						}
+						
+#						print Dumper($transition->{'to'},\%fields);
 						my $response=$jira_dst->POST('/issue/'.$issue->{'key_sync'}.'/transitions', undef, {
 							'transition' => $transition->{'id'},
 							%fields
